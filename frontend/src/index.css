@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* CarbonProof Light Theme (Warm Claude-inspired editorial aesthetic) */
+  --color-bg: #F8F7F4;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F1F0EB;
+  --color-surface-hover: #EAE8E1;
+  --color-border: #E6E4DD;
+  --color-fg-primary: #292B27;
+  --color-fg-secondary: #686B61;
+  --color-fg-muted: #93968B;
+  --color-accent: #526B52;
+  --color-accent-hover: #40563F;
+  --color-accent-soft: #E8EEE5;
+  --color-accent-border: #C8D7C4;
+
+  /* Semantic status colors with high contrast */
+  --status-success-text: #20552D;
+  --status-success-bg: #EEF6F0;
+  --status-success-border: #C2E2CB;
+
+  --status-warning-text: #825400;
+  --status-warning-bg: #FEF7E6;
+  --status-warning-border: #F0DD9E;
+
+  --status-error-text: #9B282A;
+  --status-error-bg: #FDF2F0;
+  --status-error-border: #F4CBC7;
+
+  --status-info-text: #1E4E6D;
+  --status-info-bg: #EEF4F8;
+  --status-info-border: #C5DCEB;
+}
+
+.dark {
+  /* CarbonProof Dark Theme (Refined deep mineral & slate aesthetic) */
+  --color-bg: #1A1C19;
+  --color-surface: #232621;
+  --color-surface-secondary: #2C302A;
+  --color-surface-hover: #353A33;
+  --color-border: #3E433A;
+  --color-fg-primary: #F2F2EC;
+  --color-fg-secondary: #B0B3A9;
+  --color-fg-muted: #7A7E73;
+  --color-accent: #8FA789;
+  --color-accent-hover: #A5BDA0;
+  --color-accent-soft: #2B352A;
+  --color-accent-border: #445342;
+
+  --status-success-text: #8CD49D;
+  --status-success-bg: #1B2C1E;
+  --status-success-border: #2D4D33;
+
+  --status-warning-text: #E5B450;
+  --status-warning-bg: #302611;
+  --status-warning-border: #56431C;
+
+  --status-error-text: #F18885;
+  --status-error-bg: #321919;
+  --status-error-border: #5A2727;
+
+  --status-info-text: #88BCE2;
+  --status-info-bg: #182733;
+  --status-info-border: #284459;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg-primary);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom accessible focus ring utility */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fg-muted);
+}
