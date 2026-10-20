@@ -1,0 +1,84 @@
+1
+00:00:00,100 --> 00:00:04,607
+Voluntary carbon markets face an existential trust problem.
+
+2
+00:00:04,557 --> 00:00:15,976
+Today, credit verification relies on static, disconnected PDF audit reports that take months to review, invite double-counting, and obscure baseline calculations.
+
+3
+00:00:15,976 --> 00:00:22,161
+CarbonProof AI introduces a zero-trust, deterministic verification platform.
+
+4
+00:00:22,161 --> 00:00:32,565
+We bridge physical evidence documents, explainable automated risk scoring, strict separation of audit duties, and dual-layer blockchain reconciliation.
+
+5
+00:00:32,565 --> 00:00:45,104
+Here in the Project Explorer, every environmental initiative is cataloged with structured metadata: methodology standards, crediting periods, geographic coordinates, and registry references.
+
+6
+00:00:45,104 --> 00:00:55,299
+Rather than accepting high-level claims, CarbonProof AI treats every carbon credit assertion as an unverified hypothesis until backed by immutable evidence.
+
+7
+00:00:55,299 --> 00:01:09,700
+Under the Evidence Vault, raw documentation—remote sensing GeoTIFFs, ground biomass sensor logs, and baseline additionality spreadsheets—are cryptographically fingerprinted using SHA-256.
+
+8
+00:01:09,700 --> 00:01:20,807
+Notice our critical ethical distinction: matching cryptographic fingerprints proves byte-for-byte immutability, ensuring documents cannot be retroactively altered after submission.
+
+9
+00:01:20,807 --> 00:01:27,825
+It establishes verifiable custody without making false claims of replacing on-ground physical inspection.
+
+10
+00:01:27,825 --> 00:01:35,377
+Next, our deterministic rules engine evaluates submitted projects against standardized carbon accounting criteria.
+
+11
+00:01:35,377 --> 00:01:42,278
+Unlike black-box neural networks, CarbonProof's scoring is completely transparent and reproducible.
+
+12
+00:01:42,278 --> 00:01:51,432
+Reviewers see the exact rule IDs evaluated, severity ratings from Low to Critical, and actionable remediation recommendations.
+
+13
+00:01:51,432 --> 00:01:57,044
+An auditor knows precisely why a score was assigned and what adjustments are required.
+
+14
+00:01:57,044 --> 00:01:59,895
+Integrity requires governance.
+
+15
+00:01:59,895 --> 00:02:08,515
+Our platform enforces strict separation of duties: project developers are prohibited from reviewing or approving their own submissions.
+
+16
+00:02:08,515 --> 00:02:18,697
+Accredited reviewers inspect findings, review evidence integrity, and record binding audit decisions accompanied by cryptographically signed justifications.
+
+17
+00:02:18,697 --> 00:02:28,398
+Once approved, credit batches are minted with mandatory UUID idempotency keys to eliminate double-issuance risks across network retries.
+
+18
+00:02:28,398 --> 00:02:37,643
+When credits are retired, an on-chain event burns the tokens on our Solidity registry contract while recording a unique retirement serial certificate.
+
+19
+00:02:37,643 --> 00:02:47,851
+A background reconciliation worker continuously polls the EVM node, resolving divergences and ensuring off-chain ledgers mirror on-chain finality.
+
+20
+00:02:47,851 --> 00:02:59,882
+Finally, any market participant, corporate buyer, or regulator can verify project legitimacy through our unauthenticated public portal using a project UUID or evidence hash.
+
+21
+00:02:59,882 --> 00:03:08,632
+CarbonProof AI delivers transparency without greenwashing, providing the cryptographic rigor voluntary carbon markets urgently need.
+
