@@ -1,0 +1,64 @@
+{
+  "name": "carbonproof-ai-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Evidence-first carbon verification backend for CarbonProof AI",
+  "type": "module",
+  "engines": {
+    "node": ">=20 <23"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --ext .ts",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "audit": "npm audit --audit-level=high",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.16.2",
+    "bcryptjs": "3.0.2",
+    "cors": "2.8.5",
+    "dotenv": "17.2.2",
+    "express": "5.1.0",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "8.1.0",
+    "jsonwebtoken": "9.0.2",
+    "multer": "^2.4.0",
+    "pino": "9.9.4",
+    "pino-http": "10.5.0",
+    "swagger-ui-express": "5.0.1",
+    "viem": "^2.57.7",
+    "zod": "4.1.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.36.0",
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.3",
+    "@types/jsonwebtoken": "9.0.10",
+    "@types/multer": "2.0.0",
+    "@types/node": "24.5.2",
+    "@types/supertest": "6.0.3",
+    "@types/swagger-ui-express": "4.1.8",
+    "@typescript-eslint/eslint-plugin": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.0",
+    "eslint": "9.36.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.6.2",
+    "prisma": "6.16.2",
+    "supertest": "7.1.4",
+    "tsx": "4.20.5",
+    "typescript": "5.9.2",
+    "vitest": "^5.0.5"
+  }
+}

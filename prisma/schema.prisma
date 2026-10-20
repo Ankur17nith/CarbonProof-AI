@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PUBLIC
+  CONTRIBUTOR
+  REVIEWER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  VERIFIED_INTERNAL
+  REJECTED
+}
+
+enum DataOrigin {
+  USER_SUBMITTED
+  REGISTRY_REFERENCE
+  SYNTHETIC_DEMO
+}
+
+enum ProvenanceType {
+  PRIMARY_SOURCE
+  REGISTRY_REFERENCE
+  USER_ASSERTED
+  SYNTHETIC
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AssessmentStatus {
+  VALIDATION_ERROR
+  COMPLETED_WITH_FINDINGS
+  COMPLETED_NO_FINDINGS
+  FAILED
+}
+
+enum FindingSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ReviewDecision {
+  APPROVED_FOR_INTERNAL_REVIEW
+  REJECTED
+  NEEDS_MORE_EVIDENCE
+}
+
+enum CreditLifecycleStatus {
+  REGISTERED
+  PARTIALLY_ISSUED
+  ISSUED
+  PARTIALLY_RETIRED
+  FULLY_RETIRED
+}
+
+enum CreditEventType {
+  ISSUED
+  RETIRED
+}
+
+enum BlockchainRecordStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+model User {
+  id                 String                 @id @default(cuid())
+  email              String                 @unique
+  displayName        String
+  passwordHash       String
+  role               UserRole               @default(CONTRIBUTOR)
+  status             UserStatus             @default(ACTIVE)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  projects           Project[]              @relation("ProjectCreator")
+  evidence           Evidence[]             @relation("EvidenceSubmitter")
+  assessments        Assessment[]          @relation("AssessmentCreator")
+  reviews            Review[]               @relation("Reviewer")
+  lifecycleEvents    CreditLifecycleEvent[] @relation("CreditActor")
+  auditEvents        AuditEvent[]           @relation("AuditActor")
+
+  @@index([role, status])
+}
+
+model Project {
+  id                    String          @id @default(cuid())
+  name                  String
+  slug                  String          @unique
+  description           String?
+  projectType           String
+  methodology           String
+  countryOrRegion       String?
+  registryName          String?
+  externalProjectId     String?
+  externalProjectUrl    String?
+  projectStatus         ProjectStatus   @default(DRAFT)
+  dataOrigin            DataOrigin      @default(USER_SUBMITTED)
+  isSynthetic           Boolean         @default(false)
+  createdById           String
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  createdBy             User            @relation("ProjectCreator", fields: [createdById], references: [id])
+  evidence              Evidence[]
+  assessments           Assessment[]
+  creditBatches         CreditBatch[]
+
+  @@unique([registryName, externalProjectId])
+  @@index([projectStatus, createdAt])
+  @@index([createdById])
+}
+
+model Evidence {
+  id                    String       @id @default(cuid())
+  projectId             String
+  evidenceType          String
+  title                 String
+  description           String?
+  originalFilename      String?
+  mediaType             String
+  fileSize              BigInt
+  storageKey            String?
+  sha256                String
+  sourceUrl             String?
+  sourceIdentifier      String?
+  reportingPeriodStart  DateTime?
+  reportingPeriodEnd    DateTime?
+  structuredData        Json?
+  submittedById         String
+  provenanceType        ProvenanceType @default(USER_ASSERTED)
+  isPublic              Boolean        @default(false)
+  createdAt             DateTime     @default(now())
+  project               Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submittedBy           User         @relation("EvidenceSubmitter", fields: [submittedById], references: [id])
+
+  @@index([projectId, createdAt])
+  @@index([projectId, sha256])
+  @@index([sourceIdentifier])
+}
+
+model Assessment {
+  id                String           @id @default(cuid())
+  projectId         String
+  assessmentVersion String
+  ruleSetVersion    String
+  riskScore         Int
+  riskLevel         RiskLevel
+  assessmentStatus  AssessmentStatus
+  findingsSummary   Json
+  evidenceSnapshot  Json
+  assessedAt        DateTime
+  createdById       String
+  createdAt         DateTime         @default(now())
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy         User             @relation("AssessmentCreator", fields: [createdById], references: [id])
+  findings          AssessmentFinding[]
+  reviews           Review[]
+
+  @@index([projectId, assessedAt])
+}
+
+model AssessmentFinding {
+  id                 String          @id @default(cuid())
+  assessmentId       String
+  ruleId             String
+  severity           FindingSeverity
+  category           String
+  title              String
+  explanation        String
+  affectedEvidenceIds String[]
+  affectedFields     String[]
+  observedValues     Json?
+  expectedCondition  String
+  recommendation     String
+  createdAt          DateTime        @default(now())
+  assessment         Assessment      @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId, severity])
+  @@index([ruleId])
+}
+
+model Review {
+  id          String         @id @default(cuid())
+  assessmentId String
+  reviewerId  String
+  decision    ReviewDecision
+  rationale   String
+  createdAt   DateTime       @default(now())
+  assessment  Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  reviewer    User           @relation("Reviewer", fields: [reviewerId], references: [id])
+
+  @@index([assessmentId, createdAt])
+}
+
+model CreditBatch {
+  id                       String               @id @default(cuid())
+  projectId                String
+  externalRegistryReference String?
+  batchReference           String
+  unit                     String
+  totalQuantity            BigInt
+  issuedQuantity           BigInt              @default(0)
+  retiredQuantity          BigInt              @default(0)
+  lifecycleStatus          CreditLifecycleStatus @default(REGISTERED)
+  contractAddress          String?
+  chainId                  Int?
+  onChainRecordId          String?
+  isSynthetic              Boolean              @default(false)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  project                  Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  events                   CreditLifecycleEvent[]
+
+  @@unique([projectId, batchReference])
+  @@index([lifecycleStatus, createdAt])
+}
+
+model CreditLifecycleEvent {
+  id             String          @id @default(cuid())
+  creditBatchId  String
+  eventType      CreditEventType
+  quantity       BigInt
+  actorId        String
+  transactionHash String?
+  blockNumber    BigInt?
+  idempotencyKey String          @unique
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+  creditBatch    CreditBatch     @relation(fields: [creditBatchId], references: [id], onDelete: Cascade)
+  actor          User            @relation("CreditActor", fields: [actorId], references: [id])
+
+  @@index([creditBatchId, createdAt])
+}
+
+model BlockchainRecord {
+  id              String                  @id @default(cuid())
+  recordType      String
+  entityId        String
+  chainId         Int
+  contractAddress String
+  transactionHash String?
+  blockNumber     BigInt?
+  recordIdentifier String
+  payloadHash     String
+  status          BlockchainRecordStatus
+  confirmations   Int                     @default(0)
+  lastError       String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@index([entityId, recordType])
+  @@index([transactionHash])
+  @@unique([recordType, recordIdentifier, chainId])
+}
+
+model AuditEvent {
+  id            String   @id @default(cuid())
+  actorId       String?
+  action        String
+  entityType    String
+  entityId      String
+  correlationId String
+  metadata      Json
+  createdAt     DateTime @default(now())
+  actor         User?    @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model IdempotencyRecord {
+  id             String   @id @default(cuid())
+  scope          String
+  key            String
+  requestHash    String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  @@unique([scope, key])
+  @@index([expiresAt])
+}

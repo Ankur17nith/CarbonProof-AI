@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+coverage/
+data/storage/
+*.log
+.DS_Store
+.idea/
+.vscode/
+prisma/dev.db
+contracts/cache/
+contracts/out/
+contracts/broadcast/
