@@ -14,3 +14,5 @@ contracts/cache/
 contracts/out/
 contracts/broadcast/
 *.wav
+media/demo/recording/frames/
+media/demo/recording/*.txt
