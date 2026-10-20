@@ -1,7 +1,7 @@
-# CarbonProof AI — Hackathon Demonstration Script
+# CarbonProof AI — Platform Demonstration Script
 
-**Track**: Carbon Markets & Emissions Transparency (IEEE ClimateChain Global Hackathon 2026)  
-**Target Duration**: 03:55 (Under 4-minute maximum)  
+**Domain**: Carbon Markets & Emissions Transparency  
+**Target Duration**: 03:09  
 **Tone**: Authoritative, concise, technical, calm, editorial  
 **Voice Profile**: `en-US-ChristopherNeural` (Clear, professional cadence)
 

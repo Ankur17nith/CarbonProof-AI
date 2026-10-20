@@ -1,6 +1,6 @@
 # CarbonProof AI — Demonstration Setup Guide
 
-This guide describes how to start the complete environment to reproduce the hackathon walkthrough demonstration.
+This guide describes how to start the complete environment to reproduce the product walkthrough demonstration.
 
 ---
 

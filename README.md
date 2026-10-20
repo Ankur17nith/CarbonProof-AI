@@ -1,7 +1,8 @@
 # CarbonProof AI — Zero-Trust Environmental Verification Platform
 
-[![IEEE ClimateChain Hackathon 2026](https://img.shields.io/badge/IEEE%20ClimateChain-Global%20Hackathon%202026-2D5A43?style=flat-square)](https://climatechain.ieee.org)
-[![Track](https://img.shields.io/badge/Track-Carbon%20Markets%20%26%20Emissions%20Transparency-526B52?style=flat-square)](#)
+[![Architecture](https://img.shields.io/badge/Architecture-Hexagonal%20%2F%20Clean-2D5A43?style=flat-square)](#b-system-architecture)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=flat-square)](#h-comprehensive-test-suite-execution)
+[![Tests](https://img.shields.io/badge/Tests-94%20Passing%20(100%25)-success?style=flat-square)](#h-comprehensive-test-suite-execution)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7%20%2F%205.9-blue?style=flat-square)](https://www.typescriptlang.org)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square)](https://react.dev)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636?style=flat-square)](https://soliditylang.org)
@@ -277,19 +278,7 @@ The backend automatically hosts an OpenAPI specification at `/openapi.json` and 
 
 ---
 
-## K. Demonstration Video & Hackathon Media
-
-A four-minute walkthrough demonstrating the running software, explainable risk assessment, evidence integrity check, review queue decision, and EVM settlement is provided in the repository:
-
-- **Demo Video**: [`media/demo/carbonproof-demo.mp4`](media/demo/carbonproof-demo.mp4)
-- **Synchronized Captions**: [`media/demo/carbonproof-demo.srt`](media/demo/carbonproof-demo.srt)
-- **Narration Script**: [`media/demo/narration_script.txt`](media/demo/narration_script.txt)
-- **Shot List & Timing**: [`docs/DEMO_SHOT_LIST.md`](docs/DEMO_SHOT_LIST.md)
-- **Production Notes**: [`media/demo/DEMO_PRODUCTION_NOTES.md`](media/demo/DEMO_PRODUCTION_NOTES.md)
-
----
-
-## L. Repository Directory Map
+## K. Repository Directory Map
 
 ```text
 CarbonProofAI/
@@ -312,8 +301,8 @@ CarbonProofAI/
 │   ├── public/                 # Brandmark assets and favicon
 │   ├── index.html              # HTML shell with Google Inter font
 │   └── package.json            # Frontend scripts and dependencies
-├── media/                      # Generated demonstration media and captures
-│   └── demo/                   # MP4 video, SRT captions, and recording frames
+├── media/                      # Product assets and demonstration media
+│   └── demo/                   # Product walkthrough media assets
 ├── prisma/                     # Database schema and initial PostgreSQL migrations
 │   ├── schema.prisma           # Prisma entity definitions
 │   └── seed.ts                 # Database seed script
@@ -334,7 +323,7 @@ CarbonProofAI/
 
 ---
 
-## M. License & Hackathon Acknowledgments
+## L. License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.  
-Built for the **IEEE ClimateChain Global Hackathon 2026** under the **Carbon Markets and Emissions Transparency** track.
+This project is open-source software licensed under the [MIT License](LICENSE).
+
