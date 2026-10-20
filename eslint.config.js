@@ -5,7 +5,7 @@ import prettier from 'eslint-config-prettier';
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'contracts/**', 'coverage/**', 'frontend/**'],
+    ignores: ['dist/**', 'node_modules/**', 'contracts/**', 'coverage/**', 'frontend/**', 'scripts/**', 'media/**'],
   },
   eslint.configs.recommended,
   {
