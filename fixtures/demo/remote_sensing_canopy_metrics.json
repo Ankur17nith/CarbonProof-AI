@@ -1,0 +1,41 @@
+{
+  "$schema": "https://carbonproof.ai/schemas/v1/remote-sensing-telemetry.json",
+  "project_id": "VCS-2849",
+  "project_name": "Mount Kenya Native Reforestation",
+  "sensor_system": "GEDI_LIDAR_SENTINEL2",
+  "acquisition_window": {
+    "start_utc": "2026-01-01T00:00:00Z",
+    "end_utc": "2026-02-15T23:59:59Z"
+  },
+  "geospatial_bounds": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [37.3100, -0.1200],
+        [37.3500, -0.1200],
+        [37.3500, -0.1500],
+        [37.3100, -0.1500],
+        [37.3100, -0.1200]
+      ]
+    ]
+  },
+  "metrics": {
+    "mean_canopy_height_meters": 14.82,
+    "p95_canopy_height_meters": 22.40,
+    "canopy_cover_fraction": 0.784,
+    "mean_ndvi_vegetation_index": 0.812,
+    "canopy_height_variance": 3.65,
+    "cloud_cover_percentage": 1.2
+  },
+  "permanence_risk_assessment": {
+    "wildfire_risk_score": 0.12,
+    "drought_stress_index": 0.18,
+    "anthropogenic_pressure_index": 0.22,
+    "recommended_buffer_pool_percent": 18.5
+  },
+  "data_integrity": {
+    "calibration_reference": "GEDI_L2A_REL002",
+    "atmospheric_correction": "SEN2COR_2.11",
+    "certified_pipeline_hash": "a4d8c728e19e0fa9bf129038b3014aef529124a9193be819280d0811e5b20119"
+  }
+}

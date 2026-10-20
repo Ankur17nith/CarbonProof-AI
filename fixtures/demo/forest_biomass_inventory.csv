@@ -1,0 +1,9 @@
+plot_id,species_name,tree_count,mean_dbh_cm,mean_height_m,aboveground_biomass_kg,belowground_biomass_kg,carbon_stock_tC,co2e_equivalent_tons,sampling_date,gps_latitude,gps_longitude,surveyor_id
+PLT-001,Croton megalocarpus,142,28.4,14.2,42850.4,11141.1,25.38,93.14,2026-02-14,-0.1245,37.3182,SRV-KEN-084
+PLT-002,Prunus africana,98,34.1,16.8,38920.0,10119.2,23.05,84.59,2026-02-14,-0.1268,37.3210,SRV-KEN-084
+PLT-003,Olea capensis,185,22.6,11.5,34510.8,8972.8,20.44,74.99,2026-02-15,-0.1290,37.3245,SRV-KEN-089
+PLT-004,Podocarpus falcatus,110,41.2,19.4,59820.6,15553.4,35.43,130.01,2026-02-15,-0.1315,37.3290,SRV-KEN-089
+PLT-005,Hagenia abyssinica,76,38.5,15.2,31240.2,8122.5,18.50,67.89,2026-02-16,-0.1340,37.3325,SRV-KEN-084
+PLT-006,Albizia gummifera,124,26.8,13.1,36400.1,9464.0,21.55,79.08,2026-02-16,-0.1372,37.3360,SRV-KEN-089
+PLT-007,Polyscias kikuyuensis,88,31.4,14.9,29850.7,7761.2,17.68,64.87,2026-02-17,-0.1395,37.3402,SRV-KEN-084
+PLT-008,Syzygium cordatum,156,24.1,12.3,37120.5,9651.3,21.98,80.67,2026-02-17,-0.1421,37.3438,SRV-KEN-089

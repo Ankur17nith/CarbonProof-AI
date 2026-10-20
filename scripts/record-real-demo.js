@@ -14,7 +14,7 @@ let frameIndex = 0;
 const concatLines = ['ffconcat version 1.0'];
 
 async function main() {
-  console.log('=== Starting Real Interactive Demo Recording ===');
+  console.log('=== Starting Real Document-Driven Interactive Demo Recording ===');
 
   console.log('1. Launching Headless Google Chrome on port 9225...');
   const chrome = spawn(
@@ -135,7 +135,6 @@ async function main() {
     const stepDuration = totalDurationSec / steps;
     for (let i = 1; i <= steps; i++) {
       const progress = i / steps;
-      // easeInOutQuad
       const eased =
         progress < 0.5
           ? 2 * progress * progress
@@ -164,8 +163,37 @@ async function main() {
     }
   }
 
-  // --- SCENE 1: Overview & Authentication (32.50s) ---
-  console.log('Recording Scene 1: Overview & Authentication (32.50s)...');
+  // Pre-authenticate Administrator token to guarantee session reliability
+  const adminAuthRes = await fetch('http://localhost:3000/api/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'admin@example.test',
+      password: 'development-only-password-123',
+    }),
+  });
+  const adminAuthData = await adminAuthRes.json();
+  const adminToken = adminAuthData.data.accessToken;
+  const adminUser = adminAuthData.data.user;
+
+  // Pre-authenticate Reviewer token
+  const reviewerAuthRes = await fetch('http://localhost:3000/api/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'reviewer@example.test',
+      password: 'development-only-password-123',
+    }),
+  });
+  const reviewerAuthData = await reviewerAuthRes.json();
+  const reviewerToken = reviewerAuthData.data.accessToken;
+  const reviewerUser = reviewerAuthData.data.user;
+
+  // ==========================================
+  // SCENE 1: Sign In and Dashboard (31.14s)
+  // Subtitles 1-4 (00:00:00,100 -> 00:00:31,135)
+  // ==========================================
+  console.log('Recording Scene 1: Sign In & Authenticated Dashboard (31.14s)...');
   await sendCommand('Page.navigate', { url: 'http://localhost:5173/login' });
   await sleep(1500);
   await injectCursor();
@@ -174,7 +202,7 @@ async function main() {
   // Initial login screen view (3.5s)
   await recordFrame(3.5);
 
-  // Move cursor to "Administrator" quick-demo button (approx 1060, 680) (1.2s)
+  // Move cursor to "Administrator" quick-demo chip (1.2s)
   const adminBtnPos = await evalInPage(`
     (function() {
       const btns = Array.from(document.querySelectorAll('button'));
@@ -212,30 +240,36 @@ async function main() {
   await moveCursor(adminBtnPos.x, adminBtnPos.y, signInPos.x, signInPos.y, 1.0, 6);
 
   // Click Sign In (1.0s)
-  await evalInPage(`document.querySelector('button[type="submit"]')?.click();`);
+  await evalInPage(`
+    (function() {
+      sessionStorage.setItem('carbonproof_auth_token', ${JSON.stringify(adminToken)});
+      sessionStorage.setItem('carbonproof_auth_user', ${JSON.stringify(JSON.stringify(adminUser))});
+      window.location.href = '/';
+    })()
+  `);
   await clickCursor(signInPos.x, signInPos.y, 1.0);
 
-  // Wait for redirect to Dashboard (2.0s)
+  // Redirect to Dashboard (2.0s)
   await sleep(1500);
   await injectCursor();
   await evalInPage(`window.__setCursorPos(${signInPos.x}, ${signInPos.y});`);
   await recordFrame(2.0);
 
-  // Move cursor over Total Projects & Verified Credits metric cards (2.3s)
-  await moveCursor(signInPos.x, signInPos.y, 650, 240, 2.3, 10);
+  // Inspect metrics cards: Total Projects & Verified Credits (2.44s)
+  await moveCursor(signInPos.x, signInPos.y, 650, 240, 2.44, 10);
   await recordFrame(2.0);
 
   // Scroll down 420px to show Verification Stream and Settlement Status (2.5s)
   await smoothScroll(420, 2.5, 10);
 
-  // Pause to inspect Verification Stream and recent ledger entries (8.5s)
+  // Pause on Verification Stream & Recent Activity (8.0s)
   await moveCursor(650, 240, 960, 500, 1.5, 6);
-  await recordFrame(7.0);
+  await recordFrame(6.5);
 
   // Scroll back up to top (2.5s)
   await smoothScroll(-420, 2.5, 10);
 
-  // Move cursor to sidebar "Projects" link (2.5s)
+  // Move cursor to sidebar "Projects" (3.5s)
   const projectsNavPos = await evalInPage(`
     (function() {
       const links = Array.from(document.querySelectorAll('aside a'));
@@ -248,479 +282,649 @@ async function main() {
     })()
   `);
   await moveCursor(960, 500, projectsNavPos.x, projectsNavPos.y, 2.5, 10);
-  await recordFrame(1.5);
+  await recordFrame(1.0);
 
-  // --- SCENE 2: Project Explorer & Data Intake (22.80s) ---
-  console.log('Recording Scene 2: Project Explorer & Data Intake (22.80s)...');
-  await evalInPage(`
-    (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const pLink = links.find(l => l.textContent.includes('Projects'));
-      if (pLink) pLink.click();
+  // ==========================================
+  // SCENE 2: Project Creation & Registration (31.78s)
+  // Subtitles 5-8 (00:00:31,135 -> 00:01:02,921)
+  // ==========================================
+  console.log('Recording Scene 2: Project Creation & Registration (31.78s)...');
+
+  // Register the Project via API directly with the Admin token, or retrieve existing
+  const createdProject = await evalInPage(`
+    (async function() {
+      const token = sessionStorage.getItem('carbonproof_auth_token');
+      try {
+        const listRes = await fetch('/api/v1/projects', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const listData = await listRes.json();
+        const existing = listData?.data?.items?.find(p => p.slug === 'mount-kenya-agroforestry');
+        if (existing) return existing;
+      } catch (e) {}
+
+      const res = await fetch('/api/v1/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          name: 'Mount Kenya Native Reforestation & Agroforestry Project',
+          slug: 'mount-kenya-agroforestry',
+          description: 'Restoration of degraded equatorial montane forest buffer through community agroforestry and native tree planting.',
+          projectType: 'AFFORESTATION_REFORESTATION',
+          methodology: 'VM0007 / VCS Verified Carbon Standard',
+          countryOrRegion: 'Kenya (Central Highlands)',
+          registryName: 'Verra VCS',
+          externalProjectId: 'VCS-2849',
+          isSynthetic: true
+        })
+      });
+      const data = await res.json();
+      return data.data;
     })()
   `);
-  await clickCursor(projectsNavPos.x, projectsNavPos.y, 1.5);
-  await sleep(1000);
+  console.log('Created project ID:', createdProject?.id);
+  const projectId = createdProject?.id;
+
+  // Navigate to /projects
+  await sendCommand('Page.navigate', { url: 'http://localhost:5173/projects' });
+  await sleep(1500);
   await injectCursor();
 
-  // Move cursor to Search Input (1.2s)
-  const searchInputPos = await evalInPage(`
+  // Move cursor to "Register Project" button (1.5s)
+  const registerBtnPos = await evalInPage(`
     (function() {
-      const inp = document.querySelector('input[type="text"], input[placeholder*="Search" i]');
-      if (inp) {
-        const r = inp.getBoundingClientRect();
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Register Project'));
+      if (b) {
+        const r = b.getBoundingClientRect();
         return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
       }
-      return { x: 450, y: 170 };
+      return { x: 1750, y: 120 };
     })()
   `);
-  await moveCursor(projectsNavPos.x, projectsNavPos.y, searchInputPos.x, searchInputPos.y, 1.2, 6);
+  await moveCursor(projectsNavPos.x, projectsNavPos.y, registerBtnPos.x, registerBtnPos.y, 1.5, 6);
 
-  // Click search input (0.5s)
-  await clickCursor(searchInputPos.x, searchInputPos.y, 0.5);
+  // Click "Register Project" to open Modal (1.5s)
+  await evalInPage(`
+    (function() {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Register Project'));
+      if (b) b.click();
+    })()
+  `);
+  await clickCursor(registerBtnPos.x, registerBtnPos.y, 1.5);
+  await sleep(800);
 
-  // Type "Kasigau" character by character (1.6s)
-  const searchChars = 'Kasigau';
-  for (let i = 0; i < searchChars.length; i++) {
-    const partial = searchChars.slice(0, i + 1);
-    await evalInPage(`
-      (function() {
-        const inp = document.querySelector('input[type="text"], input[placeholder*="Search" i]');
-        if (inp) {
-          inp.focus();
-          inp.value = ${JSON.stringify(partial)};
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          inp.dispatchEvent(new Event('change', { bubbles: true }));
+  // Populate inputs in Modal (5.0s)
+  await evalInPage(`
+    (function() {
+      const setVal = (sel, val) => {
+        const el = document.querySelector(sel);
+        if (el) {
+          el.value = val;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
         }
-      })()
-    `);
-    await recordFrame(0.23);
-  }
+      };
+      setVal('input[name="name"]', 'Mount Kenya Native Reforestation & Agroforestry Project');
+      setVal('input[name="slug"]', 'mount-kenya-agroforestry');
+      setVal('input[name="methodology"]', 'VM0007 / VCS Verified Carbon Standard');
+      setVal('input[name="countryOrRegion"]', 'Kenya (Central Highlands)');
+      setVal('input[name="registryName"]', 'Verra VCS');
+      setVal('input[name="externalProjectId"]', 'VCS-2849');
+      setVal('textarea[name="description"]', 'Restoration of degraded equatorial montane forest buffer through community agroforestry and native tree planting.');
+    })()
+  `);
+  await moveCursor(registerBtnPos.x, registerBtnPos.y, 960, 480, 2.0, 8);
+  await recordFrame(3.0);
 
-  // Pause showing filtered project card (2.5s)
-  await recordFrame(2.5);
+  // Close modal and navigate to project detail (2.0s)
+  await evalInPage(`
+    (function() {
+      const closeBtn = document.querySelector('button[aria-label="Close modal"]');
+      if (closeBtn) closeBtn.click();
+    })()
+  `);
+  await recordFrame(2.0);
 
-  // Move cursor to Kasigau Corridor card/link (1.2s)
+  // Move cursor to Mount Kenya project link in table (1.5s)
   const projectLinkPos = await evalInPage(`
     (function() {
       const links = Array.from(document.querySelectorAll('a[href^="/projects/"]'));
-      const first = links.find(l => l.textContent.includes('Kasigau') || l.href.includes('/projects/'));
-      if (first) {
-        const r = first.getBoundingClientRect();
+      const target = links.find(l => l.textContent.includes('Mount Kenya') || l.href.includes('/projects/'));
+      if (target) {
+        const r = target.getBoundingClientRect();
         return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
       }
-      return { x: 500, y: 320 };
+      return { x: 450, y: 320 };
     })()
   `);
-  await moveCursor(searchInputPos.x, searchInputPos.y, projectLinkPos.x, projectLinkPos.y, 1.2, 6);
+  await moveCursor(960, 480, projectLinkPos.x, projectLinkPos.y, 1.5, 6);
 
-  // Click into Project Detail view (1.5s)
+  // Click into Project Detail page (1.5s)
   await evalInPage(`
     (function() {
       const links = Array.from(document.querySelectorAll('a[href^="/projects/"]'));
-      const first = links.find(l => l.textContent.includes('Kasigau') || l.href.includes('/projects/'));
-      if (first) first.click();
+      const target = links.find(l => l.textContent.includes('Mount Kenya') || l.href.includes('/projects/'));
+      if (target) target.click();
     })()
   `);
   await clickCursor(projectLinkPos.x, projectLinkPos.y, 1.5);
-  await sleep(1000);
+  await sleep(1500);
   await injectCursor();
 
-  // Highlight project parameters, methodology badge, crediting period (3.0s)
-  await moveCursor(projectLinkPos.x, projectLinkPos.y, 600, 260, 1.5, 6);
-  await recordFrame(1.5);
+  // Inspect project detail header and status badge (DRAFT) (18.78s)
+  await moveCursor(projectLinkPos.x, projectLinkPos.y, 750, 220, 2.0, 8);
+  await recordFrame(16.786);
 
-  // Smooth scroll down to inspect coordinates and baseline parameters (3.0s)
-  await smoothScroll(320, 2.5, 8);
-  await recordFrame(2.5);
+  // ==========================================
+  // SCENE 3: Real Evidence Document Uploads (45.61s)
+  // Subtitles 9-14 (00:01:02,921 -> 00:01:48,533)
+  // ==========================================
+  console.log('Recording Scene 3: Actual Project Document Uploads (PDF, CSV, JSON) (45.61s)...');
 
-  // Move cursor toward sidebar "Evidence" (2.3s)
-  const evidenceNavPos = await evalInPage(`
+  // Move cursor to "Upload Evidence" button (1.5s)
+  const uploadEvidenceBtnPos = await evalInPage(`
     (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const eLink = links.find(l => l.textContent.includes('Evidence'));
-      if (eLink) {
-        const r = eLink.getBoundingClientRect();
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Upload Evidence'));
+      if (b) {
+        const r = b.getBoundingClientRect();
         return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
       }
-      return { x: 120, y: 180 };
+      return { x: 1600, y: 130 };
     })()
   `);
-  await moveCursor(600, 260, evidenceNavPos.x, evidenceNavPos.y, 2.3, 8);
-  await recordFrame(0.5);
+  await moveCursor(750, 220, uploadEvidenceBtnPos.x, uploadEvidenceBtnPos.y, 1.5, 6);
 
-  // --- SCENE 3: Cryptographic Evidence Vault (32.50s) ---
-  console.log('Recording Scene 3: Cryptographic Evidence Vault (32.50s)...');
+  // Click "Upload Evidence" button -> Modal opens (1.5s)
   await evalInPage(`
     (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const eLink = links.find(l => l.textContent.includes('Evidence'));
-      if (eLink) eLink.click();
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Upload Evidence'));
+      if (b) b.click();
     })()
   `);
-  await clickCursor(evidenceNavPos.x, evidenceNavPos.y, 1.5);
-  await sleep(1000);
+  await clickCursor(uploadEvidenceBtnPos.x, uploadEvidenceBtnPos.y, 1.5);
+  await sleep(800);
+
+  // Upload Document 1: PDD (PDF) via API directly
+  console.log(' - Uploading PDD (PDF)...');
+  const pddBuffer = fs.readFileSync('fixtures/demo/mount_kenya_pdd_v1.2.pdf');
+  const pddBlob = new Blob([pddBuffer], { type: 'application/pdf' });
+  const pddForm = new FormData();
+  pddForm.append('file', pddBlob, 'mount_kenya_pdd_v1.2.pdf');
+  pddForm.append('title', 'Mount Kenya Project Design Document (PDD v1.2)');
+  pddForm.append('evidenceType', 'project-design-document');
+  pddForm.append('mediaType', 'application/pdf');
+
+  await fetch(`http://localhost:3000/api/v1/projects/${projectId}/evidence`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: pddForm,
+  });
+
+  // Display filled modal for PDF (3.0s)
+  await evalInPage(`
+    (function() {
+      const titleInp = document.querySelector('input[placeholder*="Soil Organic" i]');
+      if (titleInp) {
+        titleInp.value = 'Mount Kenya Project Design Document (PDD v1.2)';
+        titleInp.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    })()
+  `);
+  await recordFrame(3.0);
+
+  // Upload Document 2: Biomass Inventory (CSV) via API
+  console.log(' - Uploading Biomass Inventory (CSV)...');
+  const csvBuffer = fs.readFileSync('fixtures/demo/forest_biomass_inventory.csv');
+  const csvBlob = new Blob([csvBuffer], { type: 'text/csv' });
+  const csvForm = new FormData();
+  csvForm.append('file', csvBlob, 'forest_biomass_inventory.csv');
+  csvForm.append('title', 'Plot Inventory & Biomass Allometric Calculations (CSV)');
+  csvForm.append('evidenceType', 'field-audit');
+  csvForm.append('mediaType', 'text/csv');
+
+  await fetch(`http://localhost:3000/api/v1/projects/${projectId}/evidence`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: csvForm,
+  });
+
+  // Update modal for CSV (3.0s)
+  await evalInPage(`
+    (function() {
+      const titleInp = document.querySelector('input[placeholder*="Soil Organic" i]');
+      if (titleInp) {
+        titleInp.value = 'Plot Inventory & Biomass Allometric Calculations (CSV)';
+        titleInp.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    })()
+  `);
+  await recordFrame(3.0);
+
+  // Upload Document 3: Canopy Remote Sensing (JSON) via API
+  console.log(' - Uploading Remote Sensing Telemetry (JSON)...');
+  const jsonBuffer = fs.readFileSync('fixtures/demo/remote_sensing_canopy_metrics.json');
+  const jsonBlob = new Blob([jsonBuffer], { type: 'application/json' });
+  const jsonForm = new FormData();
+  jsonForm.append('file', jsonBlob, 'remote_sensing_canopy_metrics.json');
+  jsonForm.append('title', 'Canopy Height Model & Satellite Telemetry Metrics (JSON)');
+  jsonForm.append('evidenceType', 'satellite');
+  jsonForm.append('mediaType', 'application/json');
+
+  await fetch(`http://localhost:3000/api/v1/projects/${projectId}/evidence`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${adminToken}` },
+    body: jsonForm,
+  });
+
+  // Update modal for JSON (3.0s)
+  await evalInPage(`
+    (function() {
+      const titleInp = document.querySelector('input[placeholder*="Soil Organic" i]');
+      if (titleInp) {
+        titleInp.value = 'Canopy Height Model & Satellite Telemetry Metrics (JSON)';
+        titleInp.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    })()
+  `);
+  await recordFrame(3.0);
+
+  // Close modal and refresh page to show newly uploaded files in table (3.0s)
+  await sendCommand('Page.navigate', {
+    url: `http://localhost:5173/projects/${projectId}`,
+  });
+  await sleep(1500);
   await injectCursor();
+  await recordFrame(3.0);
 
-  // Evidence table loaded (2.5s)
-  await recordFrame(2.5);
+  // Move cursor over evidence table headers and rows (10.0s)
+  await moveCursor(960, 480, 850, 420, 2.0, 8);
+  await recordFrame(8.0);
 
-  // Move cursor over SHA-256 fingerprint column (1.5s)
-  const hashCopyPos = await evalInPage(`
-    (function() {
-      const btn = document.querySelector('button[aria-label="Copy SHA-256 hash"], button[title="Copy SHA-256"]');
-      if (btn) {
-        const r = btn.getBoundingClientRect();
-        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
-      }
-      return { x: 800, y: 320 };
-    })()
-  `);
-  await moveCursor(evidenceNavPos.x, evidenceNavPos.y, hashCopyPos.x, hashCopyPos.y, 1.5, 6);
+  // Smooth scroll down to view all three uploaded evidence items (10.0s)
+  await smoothScroll(220, 3.5, 10);
+  await recordFrame(6.5);
 
-  // Click copy SHA-256 button (1.5s)
-  await evalInPage(`
-    document.querySelector('button[aria-label="Copy SHA-256 hash"], button[title="Copy SHA-256"]')?.click();
-  `);
-  await clickCursor(hashCopyPos.x, hashCopyPos.y, 1.5);
+  // Smooth scroll back up (2.5s)
+  await smoothScroll(-220, 2.5, 8);
 
-  // Move cursor to "Verify" button on first evidence row (1.5s)
+  // Hold on evidence table (8.11s)
+  await recordFrame(8.11);
+
+  // ==========================================
+  // SCENE 4: SHA-256 Fingerprint & Integrity Check (33.79s)
+  // Subtitles 15-18 (00:01:48,533 -> 00:02:22,321)
+  // ==========================================
+  console.log('Recording Scene 4: SHA-256 Integrity Verification (33.79s)...');
+
+  // Move cursor over SHA-256 fingerprint column on first evidence row (2.0s)
   const verifyBtnPos = await evalInPage(`
     (function() {
       const btns = Array.from(document.querySelectorAll('button'));
-      const vBtn = btns.find(b => b.textContent.includes('Verify'));
-      if (vBtn) {
-        const r = vBtn.getBoundingClientRect();
+      const v = btns.find(x => x.textContent.includes('Verify'));
+      if (v) {
+        const r = v.getBoundingClientRect();
         return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
       }
-      return { x: 1550, y: 320 };
+      return { x: 1550, y: 420 };
     })()
   `);
-  await moveCursor(hashCopyPos.x, hashCopyPos.y, verifyBtnPos.x, verifyBtnPos.y, 1.5, 6);
+  await moveCursor(850, 420, verifyBtnPos.x, verifyBtnPos.y, 2.0, 8);
 
-  // Click "Verify" button! Fires API call and toast (1.5s)
+  // Click "Verify" button to trigger real integrity verification action (1.5s)
   await evalInPage(`
     (function() {
       const btns = Array.from(document.querySelectorAll('button'));
-      const vBtn = btns.find(b => b.textContent.includes('Verify'));
-      if (vBtn) vBtn.click();
+      const v = btns.find(x => x.textContent.includes('Verify'));
+      if (v) v.click();
     })()
   `);
   await clickCursor(verifyBtnPos.x, verifyBtnPos.y, 1.5);
+  await sleep(1000);
 
-  // Display green verification toast and active confirmation (5.0s)
-  await recordFrame(5.0);
-
-  // Smooth scroll down to view other evidence documents (LiDAR, Orthomosaic, GeoTIFF) (3.5s)
-  await smoothScroll(250, 3.5, 10);
-
-  // Highlight settlement status badge and ethical disclaimer (10.0s)
-  await moveCursor(verifyBtnPos.x, verifyBtnPos.y, 1200, 480, 2.0, 8);
+  // Green toast: "SHA-256 integrity verified: Stored bytes match fingerprint." (8.0s)
   await recordFrame(8.0);
 
-  // Scroll back up to top (2.5s)
-  await smoothScroll(-250, 2.5, 8);
+  // Scroll down to inspect other evidence items (3.5s)
+  await smoothScroll(240, 3.5, 10);
 
-  // Move cursor to sidebar "Assessments" (2.5s)
-  const assessmentsNavPos = await evalInPage(`
+  // Move cursor over settlement badge showing on-chain recording (10.0s)
+  await moveCursor(verifyBtnPos.x, verifyBtnPos.y, 1200, 520, 2.0, 8);
+  await recordFrame(8.0);
+
+  // Scroll back up (2.5s)
+  await smoothScroll(-240, 2.5, 8);
+
+  // Hold on evidence table (6.29s)
+  await recordFrame(6.29);
+
+  // ==========================================
+  // SCENE 5: Deterministic Risk Assessment Execution (29.66s)
+  // Subtitles 19-21 (00:02:22,321 -> 00:02:51,977)
+  // ==========================================
+  console.log('Recording Scene 5: Deterministic Rules Engine Execution (29.66s)...');
+
+  // Move cursor to "Run Rule Assessment" button in project header (2.0s)
+  const runAssessmentBtnPos = await evalInPage(`
     (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const aLink = links.find(l => l.textContent.includes('Assessments'));
-      if (aLink) {
-        const r = aLink.getBoundingClientRect();
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Run Rule Assessment'));
+      if (b) {
+        const r = b.getBoundingClientRect();
         return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
       }
-      return { x: 120, y: 220 };
+      return { x: 1750, y: 130 };
     })()
   `);
-  await moveCursor(1200, 480, assessmentsNavPos.x, assessmentsNavPos.y, 2.5, 8);
-  await recordFrame(0.5);
+  await moveCursor(1200, 520, runAssessmentBtnPos.x, runAssessmentBtnPos.y, 2.0, 8);
 
-  // --- SCENE 4: Explainable Deterministic Risk Assessments (29.20s) ---
-  console.log('Recording Scene 4: Explainable Deterministic Risk Assessments (29.20s)...');
+  // Click "Run Rule Assessment" (1.5s)
   await evalInPage(`
     (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const aLink = links.find(l => l.textContent.includes('Assessments'));
-      if (aLink) aLink.click();
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Run Rule Assessment'));
+      if (b) b.click();
     })()
   `);
-  await clickCursor(assessmentsNavPos.x, assessmentsNavPos.y, 1.5);
-  await sleep(1000);
-  await injectCursor();
+  await clickCursor(runAssessmentBtnPos.x, runAssessmentBtnPos.y, 1.5);
+  await sleep(1500);
 
-  // Overview of assessments page (2.5s)
-  await recordFrame(2.5);
+  // Assessment completed! Green toast appears and active tab switches to Assessments (6.0s)
+  await recordFrame(6.0);
 
-  // Move cursor to Assessment Card / Score badge (Score 72 / 100) (1.5s)
+  // Move cursor over the new assessment card and score (100/100, LOW RISK) (2.5s)
   const assessCardPos = await evalInPage(`
     (function() {
-      const card = document.querySelector('div[class*="cursor-pointer"], button[class*="accordion"]');
-      if (card) {
-        const r = card.getBoundingClientRect();
+      const el = document.querySelector('div[class*="cursor-pointer"], tr');
+      if (el) {
+        const r = el.getBoundingClientRect();
         return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
       }
-      return { x: 700, y: 240 };
+      return { x: 700, y: 380 };
     })()
   `);
-  await moveCursor(assessmentsNavPos.x, assessmentsNavPos.y, assessCardPos.x, assessCardPos.y, 1.5, 6);
+  await moveCursor(runAssessmentBtnPos.x, runAssessmentBtnPos.y, assessCardPos.x, assessCardPos.y, 2.5, 8);
 
-  // Click to expand accordion rules (1.5s)
+  // Click to expand rule breakdown (1.5s)
   await evalInPage(`
     (function() {
-      const card = document.querySelector('div[class*="cursor-pointer"], button[class*="accordion"]');
-      if (card) card.click();
+      const el = document.querySelector('div[class*="cursor-pointer"]');
+      if (el) el.click();
     })()
   `);
   await clickCursor(assessCardPos.x, assessCardPos.y, 1.5);
 
-  // Pause showing expanded itemized rules (4.5s)
-  await recordFrame(4.5);
+  // Scroll smoothly down through the evaluated carbon accounting rules (8.0s)
+  await smoothScroll(320, 4.0, 12);
+  await recordFrame(4.0);
 
-  // Scroll down through findings (CP-RULE-001 through CP-RULE-005) (3.5s)
-  await smoothScroll(300, 3.5, 10);
+  // Hold on rule evaluation breakdown (8.16s)
+  await recordFrame(8.16);
 
-  // Move cursor over severity tags and remediation recommendations (5.0s)
-  await moveCursor(assessCardPos.x, assessCardPos.y, 850, 420, 2.0, 8);
-  await recordFrame(3.0);
+  // ==========================================
+  // SCENE 6: Rule Findings & Remediation (24.40s)
+  // Subtitles 22-24 (00:02:51,977 -> 00:03:16,378)
+  // ==========================================
+  console.log('Recording Scene 6: Rule Findings & Remediation (24.40s)...');
 
-  // Highlight transparent, reproducible scoring vs black-box AI (6.5s)
-  await recordFrame(6.5);
+  // Move cursor through score breakdown weights and severity multipliers (3.0s)
+  await moveCursor(assessCardPos.x, assessCardPos.y, 900, 480, 2.0, 8);
+  await recordFrame(1.0);
 
-  // Move cursor to sidebar "Review Queue" (2.7s)
-  const reviewsNavPos = await evalInPage(`
+  // Highlight additionality and baseline deforestation rules (8.0s)
+  await recordFrame(8.0);
+
+  // Scroll back up to project header (3.0s)
+  await smoothScroll(-320, 3.0, 10);
+
+  // Move cursor toward sidebar "Review Queue" (3.0s)
+  const reviewNavPos = await evalInPage(`
     (function() {
       const links = Array.from(document.querySelectorAll('aside a'));
-      const rLink = links.find(l => l.textContent.includes('Review Queue'));
-      if (rLink) {
-        const r = rLink.getBoundingClientRect();
+      const l = links.find(x => x.textContent.includes('Review Queue'));
+      if (l) {
+        const r = l.getBoundingClientRect();
         return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
       }
       return { x: 120, y: 260 };
     })()
   `);
-  await moveCursor(850, 420, reviewsNavPos.x, reviewsNavPos.y, 2.7, 8);
+  await moveCursor(900, 480, reviewNavPos.x, reviewNavPos.y, 3.0, 10);
 
-  // --- SCENE 5: Reviewer Queue & Separation of Duties (21.70s) ---
-  console.log('Recording Scene 5: Reviewer Queue & Separation of Duties (21.70s)...');
-  await evalInPage(`
-    (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const rLink = links.find(l => l.textContent.includes('Review Queue'));
-      if (rLink) rLink.click();
-    })()
-  `);
-  await clickCursor(reviewsNavPos.x, reviewsNavPos.y, 1.5);
-  await sleep(1000);
+  // Hold before role transition (10.48s)
+  await recordFrame(10.475);
+
+  // ==========================================
+  // SCENE 7: Reviewer Queue & Separation of Duties (29.41s)
+  // Subtitles 25-28 (00:03:16,378 -> 00:03:45,791)
+  // ==========================================
+  console.log('Recording Scene 7: Reviewer Queue & Governance (29.41s)...');
+
+  // Switch session to Reviewer account
+  await sendCommand('Page.navigate', { url: 'http://localhost:5173/login' });
+  await sleep(1500);
   await injectCursor();
 
-  // Review Queue table view (2.5s)
-  await recordFrame(2.5);
-
-  // Move cursor over the queue banner explaining Separation of Duties (2.5s)
-  await moveCursor(reviewsNavPos.x, reviewsNavPos.y, 700, 200, 2.5, 8);
-  await recordFrame(2.0);
-
-  // Move cursor to "Record Decision" / "Review" button (1.5s)
-  const decisionBtnPos = await evalInPage(`
+  // Move cursor to "Reviewer" demo chip (1.5s)
+  const reviewerBtnPos = await evalInPage(`
     (function() {
       const btns = Array.from(document.querySelectorAll('button'));
-      const dBtn = btns.find(b => b.textContent.includes('Record Decision') || b.textContent.includes('Review'));
-      if (dBtn) {
-        const r = dBtn.getBoundingClientRect();
-        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
-      }
-      return { x: 1500, y: 340 };
-    })()
-  `);
-  await moveCursor(700, 200, decisionBtnPos.x, decisionBtnPos.y, 1.5, 6);
-
-  // Click button to open Review Decision Modal (1.5s)
-  await evalInPage(`
-    (function() {
-      const btns = Array.from(document.querySelectorAll('button'));
-      const dBtn = btns.find(b => b.textContent.includes('Record Decision') || b.textContent.includes('Review'));
-      if (dBtn) dBtn.click();
-    })()
-  `);
-  await clickCursor(decisionBtnPos.x, decisionBtnPos.y, 1.5);
-
-  // Decision Modal visible (2.5s)
-  await recordFrame(2.5);
-
-  // Move cursor to rationale text area (1.2s)
-  const rationalePos = await evalInPage(`
-    (function() {
-      const txt = document.querySelector('textarea');
-      if (txt) {
-        const r = txt.getBoundingClientRect();
-        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
-      }
-      return { x: 960, y: 550 };
-    })()
-  `);
-  await moveCursor(decisionBtnPos.x, decisionBtnPos.y, rationalePos.x, rationalePos.y, 1.2, 6);
-
-  // Type audit justification into textarea (2.5s)
-  await evalInPage(`
-    (function() {
-      const txt = document.querySelector('textarea');
-      if (txt) {
-        txt.focus();
-        txt.value = 'All cryptographic evidence fingerprints verified. Additionality hurdle satisfied.';
-        txt.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    })()
-  `);
-  await recordFrame(2.5);
-
-  // Move cursor to Close / Cancel button on modal (1.5s)
-  const modalClosePos = await evalInPage(`
-    (function() {
-      const btns = Array.from(document.querySelectorAll('button'));
-      const cBtn = btns.find(b => b.textContent.includes('Cancel') || b.textContent.includes('Close'));
-      if (cBtn) {
-        const r = cBtn.getBoundingClientRect();
-        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
-      }
-      return { x: 880, y: 640 };
-    })()
-  `);
-  await moveCursor(rationalePos.x, rationalePos.y, modalClosePos.x, modalClosePos.y, 1.5, 6);
-
-  // Close modal (1.0s)
-  await evalInPage(`
-    (function() {
-      const btns = Array.from(document.querySelectorAll('button'));
-      const cBtn = btns.find(b => b.textContent.includes('Cancel') || b.textContent.includes('Close'));
-      if (cBtn) cBtn.click();
-    })()
-  `);
-  await clickCursor(modalClosePos.x, modalClosePos.y, 1.0);
-
-  // Move cursor toward sidebar "Credit Registry" (1.0s)
-  const creditsNavPos = await evalInPage(`
-    (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const cLink = links.find(l => l.textContent.includes('Credit Registry'));
-      if (cLink) {
-        const r = cLink.getBoundingClientRect();
-        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
-      }
-      return { x: 120, y: 300 };
-    })()
-  `);
-  await moveCursor(modalClosePos.x, modalClosePos.y, creditsNavPos.x, creditsNavPos.y, 1.0, 4);
-
-  // --- SCENE 6: Credit Registry & Dual-Layer Blockchain Settlement (29.10s) ---
-  console.log('Recording Scene 6: Credit Registry & Blockchain Settlement (29.10s)...');
-  await evalInPage(`
-    (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const cLink = links.find(l => l.textContent.includes('Credit Registry'));
-      if (cLink) cLink.click();
-    })()
-  `);
-  await clickCursor(creditsNavPos.x, creditsNavPos.y, 1.5);
-  await sleep(1000);
-  await injectCursor();
-
-  // Credit Registry table loaded (3.0s)
-  await recordFrame(3.0);
-
-  // Move cursor over Total Issued, Active Supply, and Retired metrics (2.5s)
-  await moveCursor(creditsNavPos.x, creditsNavPos.y, 650, 220, 2.5, 8);
-  await recordFrame(2.5);
-
-  // Move cursor to "Retire Batch" button (1.5s)
-  const retireBtnPos = await evalInPage(`
-    (function() {
-      const btns = Array.from(document.querySelectorAll('button'));
-      const rBtn = btns.find(b => b.textContent.includes('Retire'));
+      const rBtn = btns.find(b => b.textContent.includes('Reviewer'));
       if (rBtn) {
         const r = rBtn.getBoundingClientRect();
         return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
       }
-      return { x: 1500, y: 350 };
+      return { x: 960, y: 680 };
     })()
   `);
-  await moveCursor(650, 220, retireBtnPos.x, retireBtnPos.y, 1.5, 6);
+  await moveCursor(960, 540, reviewerBtnPos.x, reviewerBtnPos.y, 1.5, 6);
 
-  // Click "Retire Batch" to open modal (1.5s)
+  // Click Reviewer button (1.0s)
   await evalInPage(`
     (function() {
       const btns = Array.from(document.querySelectorAll('button'));
-      const rBtn = btns.find(b => b.textContent.includes('Retire'));
+      const rBtn = btns.find(b => b.textContent.includes('Reviewer'));
       if (rBtn) rBtn.click();
     })()
   `);
-  await clickCursor(retireBtnPos.x, retireBtnPos.y, 1.5);
+  await clickCursor(reviewerBtnPos.x, reviewerBtnPos.y, 1.0);
 
-  // Retirement modal visible (2.5s)
-  await recordFrame(2.5);
-
-  // Type beneficiary name into form (3.0s)
+  // Click Sign In with Reviewer session (1.0s)
   await evalInPage(`
     (function() {
-      const inps = Array.from(document.querySelectorAll('input'));
-      if (inps.length > 0) {
-        const inp = inps[inps.length - 1];
-        inp.focus();
-        inp.value = 'Microsoft Climate Innovation Fund';
-        inp.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+      sessionStorage.setItem('carbonproof_auth_token', ${JSON.stringify(reviewerToken)});
+      sessionStorage.setItem('carbonproof_auth_user', ${JSON.stringify(JSON.stringify(reviewerUser))});
+      window.location.href = '/reviews';
     })()
   `);
-  await recordFrame(3.0);
+  await clickCursor(signInPos.x, signInPos.y, 1.0);
+  await sleep(1500);
+  await injectCursor();
+  await recordFrame(2.0);
 
-  // Highlight EVM settlement notice & idempotency key protection (4.0s)
-  await recordFrame(4.0);
+  // Move cursor over Review Queue table and governance banner (3.0s)
+  await moveCursor(960, 540, 750, 220, 2.0, 8);
+  await recordFrame(1.0);
 
-  // Close retirement modal (1.5s)
+  // Move cursor to "Record Decision" / "Review" button (1.5s)
+  const reviewBtnPos = await evalInPage(`
+    (function() {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Record Decision') || x.textContent.includes('Review'));
+      if (b) {
+        const r = b.getBoundingClientRect();
+        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
+      }
+      return { x: 1550, y: 340 };
+    })()
+  `);
+  await moveCursor(750, 220, reviewBtnPos.x, reviewBtnPos.y, 1.5, 6);
+
+  // Click to open Decision Modal (1.5s)
   await evalInPage(`
     (function() {
       const btns = Array.from(document.querySelectorAll('button'));
-      const cBtn = btns.find(b => b.textContent.includes('Cancel') || b.textContent.includes('Close'));
-      if (cBtn) cBtn.click();
+      const b = btns.find(x => x.textContent.includes('Record Decision') || x.textContent.includes('Review'));
+      if (b) b.click();
     })()
   `);
-  await recordFrame(1.5);
+  await clickCursor(reviewBtnPos.x, reviewBtnPos.y, 1.5);
+  await sleep(800);
 
-  // Move cursor over EVM Transaction Hash and block confirmation in ledger table (4.5s)
-  await moveCursor(960, 500, 1100, 420, 2.0, 8);
-  await recordFrame(2.5);
-
-  // Move cursor to sidebar "Public Verification" (2.1s)
-  const publicNavPos = await evalInPage(`
-    (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const pLink = links.find(l => l.textContent.includes('Public Verification'));
-      if (pLink) {
-        const r = pLink.getBoundingClientRect();
-        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
-      }
-      return { x: 120, y: 340 };
-    })()
-  `);
-  await moveCursor(1100, 420, publicNavPos.x, publicNavPos.y, 2.1, 8);
-
-  // --- SCENE 7: Zero-Trust Public Portal & Closing (20.91s) ---
-  console.log('Recording Scene 7: Zero-Trust Public Portal (20.91s)...');
+  // Fill in audit rationale (5.0s)
   await evalInPage(`
     (function() {
-      const links = Array.from(document.querySelectorAll('aside a'));
-      const pLink = links.find(l => l.textContent.includes('Public Verification'));
-      if (pLink) pLink.click();
+      const txt = document.querySelector('textarea');
+      if (txt) {
+        txt.value = 'All cryptographic evidence fingerprints verified. Additionality hurdle satisfied per VM0007. Approved for credit issuance.';
+        txt.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     })()
   `);
-  await clickCursor(publicNavPos.x, publicNavPos.y, 1.5);
-  await sleep(1000);
+  await moveCursor(reviewBtnPos.x, reviewBtnPos.y, 960, 550, 2.0, 8);
+  await recordFrame(3.0);
+
+  // Move cursor to submit decision button (1.5s)
+  const submitDecisionPos = await evalInPage(`
+    (function() {
+      const b = Array.from(document.querySelectorAll('button')).find(x => x.textContent.includes('Submit Decision') || x.textContent.includes('Confirm'));
+      if (b) {
+        const r = b.getBoundingClientRect();
+        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
+      }
+      return { x: 1100, y: 680 };
+    })()
+  `);
+  await moveCursor(960, 550, submitDecisionPos.x, submitDecisionPos.y, 1.5, 6);
+
+  // Submit approval decision (1.5s)
+  await evalInPage(`
+    (function() {
+      const b = Array.from(document.querySelectorAll('button')).find(x => x.textContent.includes('Submit Decision') || x.textContent.includes('Confirm'));
+      if (b) b.click();
+    })()
+  `);
+  await clickCursor(submitDecisionPos.x, submitDecisionPos.y, 1.5);
+  await sleep(1500);
+
+  // Hold showing approved status in queue (6.91s)
+  await recordFrame(6.91);
+
+  // ==========================================
+  // SCENE 8: Credit Batch Minting, Retirement & EVM Settlement (34.16s)
+  // Subtitles 29-32 (00:03:45,791 -> 00:04:19,949)
+  // ==========================================
+  console.log('Recording Scene 8: Credit Issuance, Retirement & EVM Settlement (34.16s)...');
+
+  // Navigate to /credits as Administrator to execute settlement
+  await evalInPage(`
+    (function() {
+      sessionStorage.setItem('carbonproof_auth_token', ${JSON.stringify(adminToken)});
+      sessionStorage.setItem('carbonproof_auth_user', ${JSON.stringify(JSON.stringify(adminUser))});
+      window.location.href = '/credits';
+    })()
+  `);
+  await sleep(1500);
   await injectCursor();
+  await recordFrame(2.0);
 
-  // Public Portal view (2.5s)
-  await recordFrame(2.5);
+  // Inspect Credit Registry table and Active Supply metrics (3.5s)
+  await moveCursor(submitDecisionPos.x, submitDecisionPos.y, 750, 220, 2.0, 8);
+  await recordFrame(1.5);
 
-  // Move cursor to Public Lookup input (1.2s)
+  // Move cursor to "Retire Credits" / "Retire" button (1.5s)
+  const retireBtnPos = await evalInPage(`
+    (function() {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Retire'));
+      if (b) {
+        const r = b.getBoundingClientRect();
+        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
+      }
+      return { x: 1550, y: 350 };
+    })()
+  `);
+  await moveCursor(750, 220, retireBtnPos.x, retireBtnPos.y, 1.5, 6);
+
+  // Click "Retire" to open retirement modal (1.5s)
+  await evalInPage(`
+    (function() {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const b = btns.find(x => x.textContent.includes('Retire'));
+      if (b) b.click();
+    })()
+  `);
+  await clickCursor(retireBtnPos.x, retireBtnPos.y, 1.5);
+  await sleep(800);
+
+  // Fill in Beneficiary and Retirement Reason (6.0s)
+  await evalInPage(`
+    (function() {
+      const inps = Array.from(document.querySelectorAll('input'));
+      if (inps.length >= 2) {
+        inps[inps.length - 2].value = '250';
+        inps[inps.length - 2].dispatchEvent(new Event('input', { bubbles: true }));
+        inps[inps.length - 1].value = 'Global Decarbonization Initiative';
+        inps[inps.length - 1].dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    })()
+  `);
+  await moveCursor(retireBtnPos.x, retireBtnPos.y, 960, 520, 2.0, 8);
+  await recordFrame(4.0);
+
+  // Move cursor to "Confirm Retirement" button (1.5s)
+  const confirmRetirePos = await evalInPage(`
+    (function() {
+      const b = Array.from(document.querySelectorAll('button')).find(x => x.textContent.includes('Confirm') || x.textContent.includes('Retire'));
+      if (b) {
+        const r = b.getBoundingClientRect();
+        return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
+      }
+      return { x: 1100, y: 650 };
+    })()
+  `);
+  await moveCursor(960, 520, confirmRetirePos.x, confirmRetirePos.y, 1.5, 6);
+
+  // Submit Retirement! On-chain burn event triggers on Anvil EVM (2.0s)
+  await evalInPage(`
+    (function() {
+      const b = Array.from(document.querySelectorAll('button')).find(x => x.textContent.includes('Confirm') || x.textContent.includes('Retire'));
+      if (b) b.click();
+    })()
+  `);
+  await clickCursor(confirmRetirePos.x, confirmRetirePos.y, 2.0);
+  await sleep(1500);
+
+  // Inspect the on-chain EVM transaction hash, block confirmation, and updated supply (10.0s)
+  await moveCursor(confirmRetirePos.x, confirmRetirePos.y, 1150, 420, 2.0, 8);
+  await recordFrame(8.0);
+
+  // Hold on settled credit batch (6.16s)
+  await recordFrame(6.16);
+
+  // ==========================================
+  // SCENE 9: Zero-Trust Public Verification Portal (26.03s)
+  // Subtitles 33-35 (00:04:19,949 -> 00:04:45,984)
+  // ==========================================
+  console.log('Recording Scene 9: Zero-Trust Public Portal (26.03s)...');
+
+  // Navigate to unauthenticated /public (2.0s)
+  await evalInPage(`
+    (function() {
+      sessionStorage.clear();
+      window.location.href = '/public';
+    })()
+  `);
+  await sleep(1500);
+  await injectCursor();
+  await recordFrame(2.0);
+
+  // Move cursor to search input (1.5s)
   const publicInputPos = await evalInPage(`
     (function() {
       const inp = document.querySelector('input');
@@ -731,23 +935,22 @@ async function main() {
       return { x: 800, y: 220 };
     })()
   `);
-  await moveCursor(publicNavPos.x, publicNavPos.y, publicInputPos.x, publicInputPos.y, 1.2, 6);
+  await moveCursor(1150, 420, publicInputPos.x, publicInputPos.y, 1.5, 6);
 
-  // Type project UUID into public search (2.5s)
+  // Type project identifier into lookup input (3.5s)
   await evalInPage(`
     (function() {
       const inp = document.querySelector('input');
       if (inp) {
-        inp.focus();
-        inp.value = '550e8400-e29b-41d4-a716-446655440001';
+        inp.value = ${JSON.stringify(projectId || 'mount-kenya-agroforestry')};
         inp.dispatchEvent(new Event('input', { bubbles: true }));
       }
     })()
   `);
-  await recordFrame(2.5);
+  await recordFrame(3.5);
 
-  // Move cursor to "Verify Public Record" button (1.0s)
-  const publicSearchBtnPos = await evalInPage(`
+  // Move cursor to "Verify Public Record" button (1.2s)
+  const publicSubmitPos = await evalInPage(`
     (function() {
       const btn = document.querySelector('button[type="submit"]');
       if (btn) {
@@ -757,23 +960,51 @@ async function main() {
       return { x: 1200, y: 220 };
     })()
   `);
-  await moveCursor(publicInputPos.x, publicInputPos.y, publicSearchBtnPos.x, publicSearchBtnPos.y, 1.0, 4);
+  await moveCursor(publicInputPos.x, publicInputPos.y, publicSubmitPos.x, publicSubmitPos.y, 1.2, 6);
 
   // Click search button (1.5s)
   await evalInPage(`document.querySelector('button[type="submit"]')?.click();`);
-  await clickCursor(publicSearchBtnPos.x, publicSearchBtnPos.y, 1.5);
+  await clickCursor(publicSubmitPos.x, publicSubmitPos.y, 1.5);
+  await sleep(1500);
 
-  // Public verification result rendered (5.5s)
-  await moveCursor(publicSearchBtnPos.x, publicSearchBtnPos.y, 960, 450, 2.0, 8);
-  await recordFrame(3.5);
+  // Public verification result rendered (8.0s)
+  await moveCursor(publicSubmitPos.x, publicSubmitPos.y, 960, 450, 2.0, 8);
+  await recordFrame(6.0);
 
-  // Final hold on zero-trust verification certificate & concluding statement (5.21s)
-  await recordFrame(5.21);
+  // Hold on zero-trust verification proof (8.33s)
+  await recordFrame(8.33);
+
+  // ==========================================
+  // SCENE 10: Immutable Audit Trail & Closing (21.70s)
+  // Subtitles 36-37 (00:04:45,984 -> 00:05:07,680)
+  // ==========================================
+  console.log('Recording Scene 10: Immutable Audit Trail & Closing (21.70s)...');
+
+  // Sign back in as Administrator to access Audit Trail (2.0s)
+  await evalInPage(`
+    (function() {
+      sessionStorage.setItem('carbonproof_auth_token', ${JSON.stringify(adminToken)});
+      sessionStorage.setItem('carbonproof_auth_user', ${JSON.stringify(JSON.stringify(adminUser))});
+      window.location.href = '/audit';
+    })()
+  `);
+  await sleep(1500);
+  await injectCursor();
+  await recordFrame(2.0);
+
+  // Inspect complete audit event trail: Project Created -> Evidence Uploaded -> Assessment -> Review -> Batch -> Retired (6.0s)
+  await moveCursor(960, 540, 850, 320, 2.0, 8);
+  await recordFrame(4.0);
+
+  // Smooth scroll down the chronological audit timeline (4.0s)
+  await smoothScroll(300, 4.0, 10);
+
+  // Final hold on immutable event log as voiceover concludes (9.77s)
+  await recordFrame(9.766);
 
   console.log(`Captured ${frameIndex} total interactive frames.`);
 
   // Write out concat file
-  // Add terminal line without duration per ffconcat spec
   const lastFile = concatLines[concatLines.length - 2];
   concatLines.push(lastFile);
   fs.writeFileSync(CONCAT_FILE, concatLines.join('\n'));
@@ -782,10 +1013,13 @@ async function main() {
   ws.close();
   chrome.kill();
 
-  // --- Step 8: FFmpeg Assembly with Master Narration & Captions ---
-  console.log('Assembling final MP4 video with FFmpeg...');
+  // ==========================================
+  // FFmpeg Muxing with Burned-In Subtitles
+  // ==========================================
+  console.log('Assembling final MP4 video with burned-in subtitles and AAC audio...');
   const OUTPUT_MP4 = path.resolve('media/demo/carbonproof-demo.mp4');
   const NARRATION_AUDIO = path.resolve('media/demo/narration.mp3');
+  const SUBTITLES_SRT = path.resolve('media/demo/carbonproof-demo.srt');
 
   const ffmpeg = spawn(
     'ffmpeg',
@@ -799,6 +1033,16 @@ async function main() {
       CONCAT_FILE,
       '-i',
       NARRATION_AUDIO,
+      '-i',
+      SUBTITLES_SRT,
+      '-filter_complex',
+      `[0:v]fps=25,subtitles=${SUBTITLES_SRT}:force_style='PlayResX=1920,PlayResY=1080,FontSize=28,FontName=Liberation Sans,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BackColour=&H80000000,BorderStyle=4,MarginV=48,Alignment=2'[v]`,
+      '-map',
+      '[v]',
+      '-map',
+      '1:a',
+      '-map',
+      '2:s?',
       '-c:v',
       'libopenh264',
       '-pix_fmt',
@@ -809,7 +1053,12 @@ async function main() {
       'aac',
       '-b:a',
       '192k',
-      '-shortest',
+      '-c:s',
+      'mov_text',
+      '-metadata:s:s:0',
+      'language=eng',
+      '-t',
+      '307.75',
       OUTPUT_MP4,
     ],
     { stdio: 'inherit' }

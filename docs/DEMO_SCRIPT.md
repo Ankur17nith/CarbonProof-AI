@@ -1,64 +1,93 @@
 # CarbonProof AI — Platform Demonstration Script
 
 **Domain**: Carbon Markets & Emissions Transparency  
-**Target Duration**: 03:09  
+**Target Duration**: 05:07 (307.7 seconds)  
 **Tone**: Authoritative, concise, technical, calm, editorial  
-**Voice Profile**: `en-US-ChristopherNeural` (Clear, professional cadence)
+**Voice Profile**: `en-US-ChristopherNeural` (Clear, professional cadence)  
+**Subtitles**: Permanently burned-in on video frames + embedded `mov_text` subtitle track  
 
 ---
 
 ## Time-Coded Narration & Scene Script
 
-### Scene 1: Problem Statement & Product Overview (0:00 – 0:35)
-- **Visual**: CarbonProof AI Landing / Overview Dashboard (`http://localhost:5173/`).
-- **On-Screen Action**: Camera pans across the warm neutral interface, highlighting aggregated verified vs. retired credits, live verification status indicator, and the synthetic demo disclosure badge.
+### Scene 1: Sign In & Authenticated Dashboard (`00:00 - 00:31`)
+- **Visual**: CarbonProof AI Login (`/login`) and Overview Dashboard (`/`).
+- **On-Screen Action**: Visual cursor clicks the 1-click Administrator chip (`admin@example.test`), autofilling credentials. Submits sign in. Dashboard renders aggregate metrics: Total Projects, Verified Carbon Credits, and Dual-Layer EVM settlement indicators. Smooth scroll down across Verification Stream and system status.
 - **Narration**:
-  > *"Voluntary carbon markets face an existential trust problem. Today, credit verification relies on static, disconnected PDF audit reports that take months to review, invite double-counting, and obscure baseline calculations. CarbonProof AI introduces a zero-trust, deterministic verification platform. We bridge physical evidence documents, explainable automated risk scoring, strict separation of audit duties, and dual-layer blockchain reconciliation."*
+  > *"Welcome to CarbonProof AI, an evidence-first environmental verification platform engineered to restore cryptographic integrity to voluntary carbon markets. We begin by authenticating into the platform using the administrator role. On the main dashboard, market operators and auditors have immediate visibility into aggregate system metrics: total active projects, verified carbon credits, and dual-layer settlement indicators. Every metric is backed by verified data records."*
 
 ---
 
-### Scene 2: Environmental Project Explorer & Data Intake (0:35 – 1:05)
-- **Visual**: Project Explorer catalog (`/projects`) and Project Detail workspace (`/projects/:id`).
-- **On-Screen Action**: Filter projects by methodology ('Afforestation / Reforestation') and select 'Kasigau Corridor REDD+ Project'. Show project parameters, geographic coordinates, and active lifecycle stage.
+### Scene 2: Project Creation & Parameter Registration (`00:31 - 01:03`)
+- **Visual**: Project Explorer (`/projects`) and Project Detail Workspace (`/projects/:id`).
+- **On-Screen Action**: Visual cursor clicks "+ Register Project" button. Project creation modal opens. Realistic parameters populated: "Mount Kenya Native Reforestation & Agroforestry Project", methodology VM0007 (VCS ARR), region Kenya Central Highlands, registry reference VCS-2849. Submits form via `POST /api/v1/projects`. Project created in `DRAFT` status and opened in Project Detail workspace.
 - **Narration**:
-  > *"Here in the Project Explorer, every environmental initiative is cataloged with structured metadata: methodology standards, crediting periods, geographic coordinates, and registry references. Rather than accepting high-level claims, CarbonProof AI treats every carbon credit assertion as an unverified hypothesis until backed by immutable evidence."*
+  > *"Next, we register a new environmental carbon project through the platform's intake interface. We enter the project details: the Mount Kenya Native Reforestation and Agroforestry Project, adopting the verified VM0007 methodology. We specify the host region in Kenya's Central Highlands, register the external registry reference, and submit. The project is created through our REST API and initialized in draft status, ready for primary evidence intake."*
 
 ---
 
-### Scene 3: Cryptographic Evidence Vault & Integrity Check (1:05 – 1:45)
-- **Visual**: Evidence Vault (`/evidence`).
-- **On-Screen Action**: Click on an evidence document (Satellite Canopy LiDAR Survey). Display the computed SHA-256 fingerprint. Click the 'Verify Record' button showing instant match against the immutable ledger.
+### Scene 3: Actual Project Document Uploads (`01:03 - 01:48`)
+- **Visual**: Evidence Intake Modal on Project Detail workspace.
+- **On-Screen Action**: Visual cursor clicks "+ Upload Evidence". Uploads three authentic, readable demonstration documents sequentially:
+  1. `mount_kenya_pdd_v1.2.pdf`: Project Design Document with additionality barrier analysis (PDF).
+  2. `forest_biomass_inventory.csv`: Plot sample measurements with allometric biomass formulas (CSV).
+  3. `remote_sensing_canopy_metrics.json`: Satellite LiDAR canopy height telemetry and Sentinel-2 NDVI timeseries (JSON).
+  Each file is uploaded through real multipart requests (`POST /api/v1/projects/:id/evidence`) and appears in the project evidence table with computed SHA-256 fingerprints, file sizes, and media formats.
 - **Narration**:
-  > *"Under the Evidence Vault, raw documentation—remote sensing GeoTIFFs, ground biomass sensor logs, and baseline additionality spreadsheets—are cryptographically fingerprinted using SHA-256. Notice our critical ethical distinction: matching cryptographic fingerprints proves byte-for-byte immutability, ensuring documents cannot be retroactively altered after submission. It establishes verifiable custody without making false claims of replacing on-ground physical inspection."*
+  > *"In CarbonProof AI, carbon claims are treated as unverified hypotheses until backed by immutable evidence documents. We now upload actual project documentation directly to the project's evidence vault. First, we attach the Project Design Document, a comprehensive PDF detailing baseline additionality barriers. Next, we upload field biomass sample inventory data in CSV format, recording tree diameter and allometric carbon calculations. Finally, we attach satellite remote sensing telemetry in JSON format, capturing canopy height models and vegetation indices. Each document is validated, securely persisted, and indexed."*
 
 ---
 
-### Scene 4: Explainable Deterministic Risk Assessments (1:45 – 2:25)
-- **Visual**: Risk Assessments interface (`/assessments`).
-- **On-Screen Action**: Open an assessment report showing overall Risk Score (72/100, Moderate Risk). Expand itemized rules: Additionality Hurdle, Baseline Deforestation Credibility, Provenance Attachment, and Leakage Mitigation.
+### Scene 4: Cryptographic Evidence Integrity & Tamper Proof (`01:48 - 02:22`)
+- **Visual**: Evidence Table on Project Detail page.
+- **On-Screen Action**: Visual cursor inspects the SHA-256 fingerprint column (`8d5bac3a...`). Clicks "Verify" button on the evidence record. Backend executes `POST /api/v1/evidence/:id/verify-integrity`, reading stored bytes from disk and re-hashing them. Green toast confirmation: *"SHA-256 integrity verified: Stored bytes match fingerprint."* Settlement status badge displays on-chain confirmation.
 - **Narration**:
-  > *"Next, our deterministic rules engine evaluates submitted projects against standardized carbon accounting criteria. Unlike black-box neural networks, CarbonProof's scoring is completely transparent and reproducible. Reviewers see the exact rule IDs evaluated, severity ratings from Low to Critical, and actionable remediation recommendations. An auditor knows precisely why a score was assigned and what adjustments are required."*
+  > *"Every uploaded file is immediately fingerprinted using SHA-256. Notice our ethical verification boundary: matching cryptographic fingerprints guarantees that stored bytes are byte-for-byte identical to what was submitted, preventing retro-active alteration. We trigger the platform's integrity verification action: the backend reads the stored file, recalculates the cryptographic digest, and confirms an exact match against the ledger. It establishes immutable custody without claiming to replace on-ground physical inspection."*
 
 ---
 
-### Scene 5: Reviewer Queue & Separation of Duties (2:25 – 3:00)
-- **Visual**: Review Queue (`/reviews`).
-- **On-Screen Action**: Log in as an accredited Reviewer. Open a pending project audit. Show the disabled approval button for self-authored projects. Demonstrate entering audit findings and recording an official approval decision.
+### Scene 5: Deterministic Risk Assessment Execution (`02:22 - 02:52`)
+- **Visual**: Assessments Tab on Project Detail workspace.
+- **On-Screen Action**: Visual cursor clicks "Run Rule Assessment" in the project header. Real verification engine executes across project metadata and attached evidence. Toast notification: *"Assessment completed! Risk Score: 100/100 (LOW)"*. Tab automatically switches to Assessments. Accordion expands to reveal itemized rule evaluations.
 - **Narration**:
-  > *"Integrity requires governance. Our platform enforces strict separation of duties: project developers are prohibited from reviewing or approving their own submissions. Accredited reviewers inspect findings, review evidence integrity, and record binding audit decisions accompanied by cryptographically signed justifications."*
+  > *"With primary evidence in custody, we execute the platform's deterministic rules engine. Unlike opaque black-box neural networks, CarbonProof evaluates submitted projects against standardized carbon accounting criteria using transparent, reproducible rules. The engine evaluates additionality hurdles, baseline deforestation credibility, boundary validation, and provenance attachment, generating an overall risk score and an itemized breakdown."*
 
 ---
 
-### Scene 6: Credit Registry & Dual-Layer Blockchain Settlement (3:00 – 3:35)
+### Scene 6: Rule Findings & Actionable Remediation (`02:52 - 03:16`)
+- **Visual**: Assessment Score Breakdown & Findings.
+- **On-Screen Action**: Visual cursor scrolls down through the 14 evaluated carbon accounting rules: additionality barriers, baseline credibility, geographic boundary intersection, and unit consistency. Inspects findings, severity ratings, and remediation recommendations.
+- **Narration**:
+  > *"Reviewers can inspect each individual finding produced by the rules engine. Here, the system flags the absence of registered land tenure deed attachments, assigning a moderate severity and recommending submission of official cadastral records. The rules engine provides clear, actionable remediation guidance so project proponents know exactly what evidentiary gaps must be resolved."*
+
+---
+
+### Scene 7: Reviewer Queue & Separation of Duties (`03:16 - 03:45`)
+- **Visual**: Authentication transition and Review Queue (`/reviews`).
+- **On-Screen Action**: User logs out and re-authenticates as an accredited Reviewer (`reviewer@example.test`). Opens `/reviews`. Governance banner enforces separation of duties: authors cannot review or self-approve projects. Opens the Mount Kenya project audit, inputs written justification into the audit rationale textarea, and clicks "Submit Decision" (`APPROVED_FOR_INTERNAL_REVIEW`). Status updates to verified.
+- **Narration**:
+  > *"Integrity requires strict governance. We switch to the reviewer account to demonstrate separation of duties. Under our platform's governance model, project developers are prohibited from reviewing or approving their own submissions. An accredited reviewer audits the evidence vault and risk findings, records written justifications detailing the additionality verification, and submits an official approval decision, transitioning the project to verified internal status."*
+
+---
+
+### Scene 8: Credit Issuance, Retirement & EVM Settlement (`03:45 - 04:20`)
 - **Visual**: Credit Registry (`/credits`).
-- **On-Screen Action**: Open the Credit Batches view. Show available vs. retired quantities. Demonstrate credit retirement for a corporate beneficiary. Show the resulting Anvil EVM transaction hash and event confirmation.
+- **On-Screen Action**: User navigates to `/credits`. Visual cursor clicks "Create Credit Batch", specifying `BATCH-MKENYA-2026-001` with `5000 tCO2e`. Issues the batch with mandatory UUID idempotency key. Clicks "Retire Credits" to retire `250 tCO2e` for the "Global Decarbonization Initiative" for Scope 3 voluntary offsetting. Solidity smart contract on Anvil EVM burns tokens, emitting an on-chain event receipt and updating balances to 4,750 active / 250 retired.
 - **Narration**:
-  > *"Once approved, credit batches are minted with mandatory UUID idempotency keys to eliminate double-issuance risks across network retries. When credits are retired, an on-chain event burns the tokens on our Solidity registry contract while recording a unique retirement serial certificate. A background reconciliation worker continuously polls the EVM node, resolving divergences and ensuring off-chain ledgers mirror on-chain finality."*
+  > *"Once verified, the platform authorizes the creation and issuance of credit batches, protected by mandatory idempotency keys to eliminate duplicate minting across network retries. We mint five thousand metric tons of verified carbon credits. Next, we retire two hundred and fifty credits on behalf of a named corporate beneficiary for Scope 3 voluntary offsetting. The transaction settles directly against our Solidity smart contract on the EVM node, burning the credits and returning an immutable on-chain transaction receipt."*
 
 ---
 
-### Scene 7: Public Verification Portal & Closing (3:35 – 3:55)
+### Scene 9: Zero-Trust Public Verification Portal (`04:20 - 04:46`)
 - **Visual**: Public Verification Portal (`/public`).
-- **On-Screen Action**: Enter an evidence SHA-256 hash in the unauthenticated public portal. Display the instant public certificate verifying the proof.
+- **On-Screen Action**: Visual cursor opens `/public` in an unauthenticated state. Enters `mount-kenya-agroforestry` in the public search bar and clicks "Verify Public Record". The public portal renders verified disclosure: project metadata, SHA-256 evidence digests, and retirement certificate serials without exposing confidential operational credentials.
 - **Narration**:
-  > *"Finally, any market participant, corporate buyer, or regulator can verify project legitimacy through our unauthenticated public portal using a project UUID or evidence hash. CarbonProof AI delivers transparency without greenwashing, providing the cryptographic rigor voluntary carbon markets urgently need."*
+  > *"Transparency extends to all market participants. In an unauthenticated session, any corporate buyer, auditor, or regulator can access the Zero-Trust Public Verification Portal. By querying the project identifier or evidence hash, the portal retrieves public project status, verified evidence fingerprints, and retirement certificate serials without exposing confidential operational data."*
+
+---
+
+### Scene 10: Immutable Audit Trail & Conclusion (`04:46 - 05:07`)
+- **Visual**: Audit Trail (`/audit`).
+- **On-Screen Action**: User switches back to Administrator and opens `/audit`. Displays the complete cryptographic lifecycle event timeline: project registration, evidence uploads, SHA-256 integrity verification, rules evaluation, reviewer approval, credit batch issuance, and retirement.
+- **Narration**:
+  > *"Finally, our immutable Audit Trail logs every state transition, evidence verification, reviewer approval, and settlement event with cryptographic timestamps and actor attribution. CarbonProof AI delivers deterministic rigor and cryptographic certainty, transforming voluntary carbon markets into a verifiable, trustworthy ecosystem."*
