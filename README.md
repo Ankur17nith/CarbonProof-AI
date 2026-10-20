@@ -214,7 +214,7 @@ When running in development mode (`NODE_ENV=development`), the system automatica
 
 | Role | Email | Password | Primary Workflow |
 |---|---|---|---|
-| **Contributor** | `contributor@example.test` | `development-only-password-123` | Submit projects, upload evidence files, request evaluations |
+| **Contributor** | `contributor@example.test` | `111111111111` | Submit projects, upload evidence files, request evaluations |
 | **Reviewer** | `reviewer@example.test` | `development-only-password-123` | Audit review queue, evaluate findings, approve/reject |
 | **Administrator** | `admin@example.test` | `development-only-password-123` | Issue & retire credit batches, inspect immutable audit trail |
 
