@@ -22,9 +22,6 @@
     "audit": "npm audit --audit-level=high",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@prisma/client": "6.16.2",
     "bcryptjs": "3.0.2",
