@@ -13,3 +13,4 @@ prisma/dev.db
 contracts/cache/
 contracts/out/
 contracts/broadcast/
+*.wav

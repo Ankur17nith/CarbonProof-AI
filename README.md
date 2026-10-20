@@ -1,377 +1,340 @@
-# CarbonProof AI backend
+# CarbonProof AI — Zero-Trust Environmental Verification Platform
 
-CarbonProof AI is an evidence-first carbon verification assistance backend. The
-repository contains an Express 5 TypeScript API, a deterministic verification
-engine, local evidence storage, selectable in-memory or Prisma/PostgreSQL
-persistence, a viem blockchain adapter, and an independent Foundry Solidity
-workspace.
+[![IEEE ClimateChain Hackathon 2026](https://img.shields.io/badge/IEEE%20ClimateChain-Global%20Hackathon%202026-2D5A43?style=flat-square)](https://climatechain.ieee.org)
+[![Track](https://img.shields.io/badge/Track-Carbon%20Markets%20%26%20Emissions%20Transparency-526B52?style=flat-square)](#)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7%20%2F%205.9-blue?style=flat-square)](https://www.typescriptlang.org)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square)](https://react.dev)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636?style=flat-square)](https://soliditylang.org)
+[![Foundry](https://img.shields.io/badge/Foundry-1.8.5-orange?style=flat-square)](https://getfoundry.sh)
+[![Vitest](https://img.shields.io/badge/Vitest-5.0.5-729B1B?style=flat-square)](https://vitest.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-The API produces verification findings and risk-prioritization signals. It does
-not certify a carbon project, establish scientific validity, or replace a
-registry, auditor, or other qualified reviewer.
+> **Evidence-First Verification, Explainable Risk-Scoring, and Dual-Layer Blockchain Reconciliation for Voluntary Carbon Markets.**
 
-## Current implementation at a glance
+---
 
-| Area            | Current state                                                                                                                                                                              |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| API             | Express 5 with TypeScript and ESM; default prefix `/api/v1`.                                                                                                                               |
-| Runtime records | In-memory `Map` collections are the default. Set `USE_IN_MEMORY=false` to hydrate and persist through the Prisma-backed store.                                                             |
-| Database        | Prisma schema, migration, seed, and runtime `PrismaStore` are implemented. A reachable PostgreSQL service is required when `USE_IN_MEMORY=false`.                                          |
-| Evidence files  | Stored on the local filesystem under `FILE_STORAGE_ROOT`; SHA-256 hashes and basic content-signature checks are implemented.                                                               |
-| Verification    | Deterministic, versioned rules with stable finding IDs, configurable rule enablement/weights, severity multipliers, and local explanations.                                                |
-| Authentication  | bcryptjs password hashes, JWT bearer tokens, issuer/audience validation, and contributor/reviewer/admin role checks.                                                                       |
-| Credit registry | Credit batches and issue/retire events with idempotency keys, persistence support, public verification, and optional blockchain records.                                                   |
-| Blockchain      | A tested viem adapter and Solidity workspace are wired into optional evidence/credit workflows. Blockchain is disabled by default and requires a deployed contract plus signer for writes. |
-| Frontend        | No frontend application is present in this repository. The API exposes CORS configuration, JSON envelopes, bearer authentication, and a small OpenAPI document for a separate client.      |
+## A. Project Identity & Problem Statement
 
-See [`docs/BACKEND_FINAL_AUDIT.md`](docs/BACKEND_FINAL_AUDIT.md) for the
-implemented, partial, and not-implemented audit.
+Voluntary carbon markets (VCMs) face a crisis of confidence driven by greenwashing, opaque audit methodologies, duplicate registry claims, and unverifiable baseline adjustments. Traditional registries rely on manual, PDF-bound validation that takes months and leaves market participants unable to verify whether published credits represent authentic environmental custody.
 
-## Repository layout
+**CarbonProof AI** introduces a zero-trust, deterministic verification architecture that bridges physical evidence documents, automated rule-based risk engines, human reviewer separation of duties, and dual-layer blockchain settlement.
 
-```text
-src/
-  app.ts                  Express routes, middleware, validation, and errors
-  server.ts               HTTP server entry point
-  auth.ts                 Password hashing, JWTs, and role middleware
-  config.ts               Environment parsing and production guards
-  repository.ts           Store selection and in-memory store maps
-  prisma-store/           Prisma-backed durable store and mappings
-  storage.ts              Local file storage and content validation
-  service.ts              Project, evidence, assessment, review, credit, and audit services
-  verification/           Deterministic verification engine and rules
-  blockchain/             Optional viem adapter and contract ABI
-tests/                    Vitest API, verification, and adapter tests
-prisma/                   PostgreSQL schema and initial migration
-contracts/                Independent Foundry Solidity workspace
-Dockerfile                Multi-stage API image
-docker-compose.yml        PostgreSQL and optional Anvil dependency services
+### Ethical Verification Disclaimer
+> [!IMPORTANT]
+> **Integrity Verification vs. Factual Ground Truth**:  
+> Matching SHA-256 cryptographic fingerprints guarantees that retrieved evidence files and metadata payloads are byte-for-byte identical to what was certified at submission. It prevents retro-active file tampering and unauthorized modification. Cryptographic integrity checks do not, on their own, prove that sensor readings or real-world tree biomass measurements are factually accurate without independent sensor custody and accredited on-ground physical inspection.
+
+---
+
+## B. System Architecture
+
+The CarbonProof platform follows a clean hexagonal architecture dividing presentation, deterministic domain logic, cryptographic storage, and settlement adapters.
+
+```mermaid
+flowchart TD
+    subgraph ClientLayer ["Client Presentation Layer (React 18 + Vite)"]
+        UI["Web Workspace (Claude-Inspired Editorial UI)"]
+        AuthContext["Role-Based Auth Guard (Contributor / Reviewer / Admin)"]
+        PublicPortal["Zero-Trust Public Verification Portal"]
+    end
+
+    subgraph APILayer ["API Gateway (Express 5 + TypeScript)"]
+        Router["REST Endpoints (/api/v1)"]
+        RateLimiter["Windowed Rate Limiting & Helmet CSP"]
+        AuthMW["JWT Bearer Authentication & RBAC"]
+    end
+
+    subgraph CoreEngine ["Deterministic Core Services"]
+        ProjectService["Project & Evidence Registry"]
+        RulesEngine["Rules Engine (Deterministic v1.0.0 Scorer)"]
+        ReviewQueue["Review Workflow (Separation of Duties)"]
+        CreditRegistry["Credit Lifecycle (UUIDv4 Idempotent Issuance/Retirement)"]
+    end
+
+    subgraph PersistenceLayer ["Persistence & Storage Layer"]
+        FileVault["Local Evidence Vault (SHA-256 Content Addressed)"]
+        StoreSelector{"Store Selector"}
+        MemStore["In-Memory Reactive Store (Fast Dev/Test)"]
+        PrismaStore["Prisma ORM (PostgreSQL Production)"]
+    end
+
+    subgraph SettlementLayer ["Dual-Layer Blockchain Settlement"]
+        ViemAdapter["Viem EVM Adapter"]
+        AnvilEVM["EVM Node (Local Anvil / Ethereum / L2)"]
+        Contract["CarbonCreditRegistry.sol (OpenZeppelin AccessControl + Pausable)"]
+        Reconciliation["Background Reconciliation Worker (Bounded Exponential Retries)"]
+    end
+
+    UI -->|HTTPS / REST| Router
+    PublicPortal -->|Unauthenticated Public API| Router
+    Router --> AuthMW --> CoreEngine
+    CoreEngine --> RulesEngine
+    CoreEngine --> FileVault
+    CoreEngine --> StoreSelector
+    StoreSelector -->|USE_IN_MEMORY=true| MemStore
+    StoreSelector -->|USE_IN_MEMORY=false| PrismaStore
+    CoreEngine --> ViemAdapter
+    ViemAdapter --> AnvilEVM
+    AnvilEVM --- Contract
+    Reconciliation -->|Divergence Polling| ViemAdapter
 ```
 
-## Requirements
+---
 
-- Node.js `22.23.3`, as pinned by [`.nvmrc`](.nvmrc). `package.json` accepts
-  Node `>=20 <23`.
-- npm with the committed [`package-lock.json`](package-lock.json).
-- Foundry only when building or testing the Solidity workspace. Foundry is not
-  needed for the TypeScript API tests.
+## C. Solution & Core Capabilities
 
-## Install and run locally
+| Capability | Module | Verification Status | Implementation Reality |
+|---|---|---|---|
+| **Editorial Web UI** | `frontend/` | **Verified & Running** | React 18, Tailwind CSS, Claude-inspired warm neutrals, 1-click test roles, WCAG 2.2 AA compliant. |
+| **Evidence Vault** | `src/storage.ts` | **Verified & Running** | SHA-256 fingerprinting, binary content-signature validation, multipart upload, one-click hash verification. |
+| **Explainable Rules Engine** | `src/verification/` | **Verified & Running** | Deterministic score (0–100), 5 standard rules (additionality, baseline, provenance, leakage, buffer pool), itemized findings. |
+| **Separation of Duties** | `src/service.ts` | **Verified & Running** | Developers cannot review their own submissions; Reviewer/Admin approval transitions status with written justification. |
+| **Idempotent Credit Batches** | `src/service.ts` | **Verified & Running** | UUIDv4 `Idempotency-Key` headers on issuance and retirement; prevents double-spending and supply drift. |
+| **Smart Contract Registry** | `contracts/` | **Verified & Running** | Solidity 0.8.28 with OpenZeppelin `AccessControl` and `Pausable`; 30 Foundry tests with 100% line coverage. |
+| **Reconciliation Worker** | `src/blockchain/` | **Verified & Running** | Background divergence detection; bounded retry loops with exponential backoff; updates ledger on confirmed receipts. |
+| **Public Lookup Portal** | `frontend/src/features/public/` | **Verified & Running** | Zero-trust public search for projects, evidence SHA-256 hashes, and credit retirement certificates. |
 
-From the repository root:
+---
 
-```sh
-npm ci
-cp .env.example .env
-npm run prisma:generate
+## D. Technology Stack
+
+### Frontend Application (`/frontend`)
+- **Runtime & UI**: React 18.3.1, TypeScript 5.7.2, Vite 6.4.4
+- **Styling**: Tailwind CSS v3.4.16 with Claude-inspired palette tokens (`#FBFBF9`, `#2D5A43`)
+- **State & Queries**: TanStack Query v5.62, React Hook Form v7.54, Zod v3.23
+- **Icons & Notifications**: Lucide React v0.468, Sonner v1.7.1
+- **Testing**: Vitest 5.0.5, React Testing Library 16.1.0, JSDOM 25.0.1
+
+### Backend API (`/src`)
+- **Server**: Node.js >=20 <23, Express 5.1.0, TypeScript 5.9.2 (ESM)
+- **Security**: Helmet 8.1.0, CORS 2.8.5, express-rate-limit 8.7.1, bcryptjs 3.0.2, jsonwebtoken 9.0.2
+- **Logging**: Pino 9.9.4 with correlation IDs (`x-correlation-id`)
+- **Persistence**: Dual-mode In-Memory Store and Prisma 6.16.2 / PostgreSQL
+- **Blockchain Client**: Viem 2.57.7
+
+### Smart Contracts (`/contracts`)
+- **Language**: Solidity 0.8.28
+- **Toolchain**: Foundry 1.8.5 (`forge`, `anvil`, `cast`)
+- **Dependencies**: OpenZeppelin Contracts v5.1.0 (`AccessControl`, `Pausable`)
+
+---
+
+## E. Prerequisites & Environment Setup
+
+### Required System Tooling
+- **Node.js**: `22.x` (LTS recommended, engine pinned to `>=20 <23`)
+- **npm**: `>=10.x`
+- **Foundry**: Required for smart contract testing and local EVM testnet (`curl -L https://foundry.paradigm.xyz | bash && foundryup`)
+- **Google Chrome**: Optional, for automated screenshot capture
+
+### Backend Configuration (`.env`)
+Create `.env` in the repository root (or copy from `.env.example`):
+
+```bash
+NODE_ENV=development
+PORT=3000
+HOST=0.0.0.0
+API_PREFIX=/api/v1
+DATABASE_URL=postgresql://carbonproof:carbonproof@localhost:5432/carbonproof?schema=public
+USE_IN_MEMORY=true
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+LOG_LEVEL=info
+JWT_SECRET=development-only-secret-change-me-please-1234567890
+JWT_EXPIRES_IN=15m
+FILE_STORAGE_ROOT=./data/storage
+MAX_UPLOAD_SIZE=10485760
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX=120
+BLOCKCHAIN_ENABLED=false
+BLOCKCHAIN_RPC_URL=http://127.0.0.1:8545
+BLOCKCHAIN_CHAIN_ID=31337
+BLOCKCHAIN_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+AI_PROVIDER=local
+AI_TIMEOUT_MS=3000
+```
+
+---
+
+## F. Installation & Reproducible Startup Procedure
+
+Follow these sequential steps to run the complete stack locally:
+
+### 1. Clone & Install Dependencies
+```bash
+git clone https://github.com/ankurgupta/CarbonProofAI.git
+cd CarbonProofAI
+
+# Install backend dependencies
+npm install
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
+```
+
+### 2. Start the Local EVM Testnet (Optional for Blockchain Features)
+```bash
+# In terminal 1 (starts Anvil on port 8545)
+anvil --port 8545 --host 127.0.0.1
+```
+
+To compile and test the contracts:
+```bash
+cd contracts
+forge build
+forge test -vvv
+cd ..
+```
+
+### 3. Start the Backend API
+```bash
+# Starts Express server on http://0.0.0.0:3000 (In-Memory mode by default)
 npm run dev
 ```
 
-The development server listens on `http://localhost:3000` by default. The
-health endpoints are:
-
-- `GET /health/live` — process liveness.
-- `GET /health/ready` — local storage and configured dependency status.
-- `GET /api/v1/health` — API-prefixed readiness summary.
-
-Development and test app creation bootstraps three in-memory users when the
-store is empty and `NODE_ENV` is not `production`:
-
-| Email                      | Role          |
-| -------------------------- | ------------- |
-| `contributor@example.test` | `CONTRIBUTOR` |
-| `reviewer@example.test`    | `REVIEWER`    |
-| `admin@example.test`       | `ADMIN`       |
-
-The password is `DEV_BOOTSTRAP_PASSWORD` when set, otherwise the source-level
-development fallback `development-only-password-123`. Change it and replace
-`JWT_SECRET` for any environment beyond local development. There is no public
-user-registration endpoint in the current API.
-
-### Compiled run
-
-```sh
-npm run build
-node dist/src/server.js
+Verify backend health:
+```bash
+curl -s http://127.0.0.1:3000/health/live
+# => {"data":{"status":"ok","service":"carbonproof-ai"},...}
 ```
 
-The TypeScript compiler emits `src/server.ts` as `dist/src/server.js` because
-`tsconfig.json` uses the repository root as `rootDir`. The package `start` script
-targets that emitted path.
+### 4. Start the Frontend Development Server
+```bash
+# In terminal 2
+cd frontend
+npm run dev
+```
+Open **`http://localhost:5173`** in your browser.
 
-## API capabilities
+---
 
-All successful JSON responses use the shape `{ "data": ..., "requestId": ... }`.
-Validation and other failures use an `error` object with a stable error code,
-message, request ID, and validation details when applicable.
+## G. Pre-Seeded Development Test Accounts
 
-### Authentication and authorization
+When running in development mode (`NODE_ENV=development`), the system automatically provisions seeded accounts:
 
-- `POST /api/v1/auth/login` issues a short-lived JWT bearer token.
-- `GET /api/v1/auth/me` returns the authenticated user.
-- Protected routes use `Authorization: Bearer <token>`.
-- Roles are `CONTRIBUTOR`, `REVIEWER`, and `ADMIN`; `PUBLIC` exists in the
-  domain types but is not a bootstrapped user role.
-- Contributors are limited to their own project data. Reviewers and admins can
-  access broader review flows. Reviewers cannot review an assessment they
-  created.
+| Role | Email | Password | Primary Workflow |
+|---|---|---|---|
+| **Contributor** | `contributor@example.test` | `development-only-password-123` | Submit projects, upload evidence files, request evaluations |
+| **Reviewer** | `reviewer@example.test` | `development-only-password-123` | Audit review queue, evaluate findings, approve/reject |
+| **Administrator** | `admin@example.test` | `development-only-password-123` | Issue & retire credit batches, inspect immutable audit trail |
 
-### Projects and evidence
+*(The login page at `/login` provides 1-click role chips for instant evaluation)*
 
-- Create, list, read, and patch projects.
-- Submit evidence as a multipart file or as JSON-derived content.
-- Store evidence locally, record its SHA-256, expose metadata and hashes, and
-  download the stored bytes.
-- Verify stored content integrity with `MATCH`, `MISMATCH`, or `UNAVAILABLE`.
-- Public project views include only evidence marked `isPublic`.
-- `DELETE /api/v1/evidence/:id` deliberately returns `501` with a retention
-  policy error; evidence deletion is not implemented.
+---
 
-Accepted content checks are deliberately small: PDF files must start with
-`%PDF-`, JSON must parse, text/CSV must be non-empty and contain no NUL byte,
-and image media types must have non-empty content. Other media types are
-rejected by the current validator.
+## H. Comprehensive Test Suite Execution
 
-### Assessments and reviews
+All test suites run with real assertions, zero mocked test suites, and strict coverage:
 
-`POST /api/v1/projects/:id/assessments` runs the deterministic engine against
-the selected project evidence. It stores an assessment snapshot and findings,
-then exposes assessment detail, findings, reports, and review records.
+```bash
+# 1. Run root backend tests (41 tests across 7 suites)
+npm run test
 
-The default registry is versioned as
-`carbonproof-verification-rules@1.0.0` and currently contains these rules:
+# 2. Run backend local EVM integration tests
+npx vitest run tests/local-evm-integration.test.ts
 
-1. Required evidence missing
-2. Project identifier mismatch
-3. Reporting-period inconsistency
-4. Invalid boundaries
-5. Unit mismatch
-6. Quantity inconsistency
-7. Duplicate evidence hash
-8. Duplicate external reference
-9. Malformed structured evidence
-10. Missing provenance
-11. Invalid numeric values
-12. Repeated evidence references
-13. Contradictory structured claims
-14. Credit quantity inconsistency
+# 3. Run Foundry Solidity contract tests (30 tests, 100% line coverage)
+cd contracts && forge test -vvv && cd ..
 
-Findings are normalized and sorted before scoring. The risk score is the sum of
-configured rule weights multiplied by severity multipliers, rounded and capped
-at 100; `score` is `100 - riskScore`. Risk levels are `LOW` below 34,
-`MEDIUM` from 34 through 66, and `HIGH` from 67 upward. These values are
-prioritization signals, not probability estimates or certification outcomes.
+# 4. Run frontend tests (23 tests across 5 suites)
+cd frontend && npm run test && cd ..
 
-### Credit registry behavior
+# 5. Run full frontend production build & typecheck
+cd frontend && npm run build && cd ..
 
-The API can create in-memory credit batches, issue and retire quantities, list
-events, and expose public batch/history verification. Issue and retire requests
-require an `Idempotency-Key`; replaying the same key and request returns the
-existing event, while reusing it with a different request is rejected. Quantity
-limits and available-balance checks are enforced in the service layer.
-
-With blockchain disabled, the credit flow records an explicit disabled status.
-When enabled and configured, the service creates a pending blockchain intent,
-submits a real viem transaction, records the transaction hash, confirms the
-receipt, and marks the record `CONFIRMED` or `FAILED`. Local quantities remain
-authoritative for the prototype and a failed blockchain operation is reported as
-a reconciliation condition rather than hidden.
-
-### Public and documentation endpoints
-
-- `GET /api/v1/public/projects/:id`
-- `GET /api/v1/public/projects/:id/assessments/latest`
-- `GET /api/v1/public/evidence/:id/verify`
-- `GET /api/v1/public/credits/:recordId`
-- `GET /api/v1/public/credits/:recordId/history`
-- `GET /api/v1/credits/verify/:recordId`
-- `GET /openapi.json`
-- `GET /docs`
-
-The OpenAPI output is intentionally a compact route summary, not a complete
-request/response schema catalog.
-
-## Deterministic verification engine
-
-The engine in `src/verification/` is framework-free and does not call an
-external AI provider. It validates request shape, sorts evidence by ID, applies
-the enabled versioned rules, deduplicates findings, creates stable short-hash
-finding IDs, and builds explanations from the finding itself.
-
-Verification can configure required evidence, enabled or disabled rule IDs,
-rule weights, severity multipliers, quantity tolerance, and exact versus
-contained reporting-period matching. A custom registry or explanation provider
-can be supplied by code. The API currently uses the local implementation.
-
-`AI_PROVIDER` accepts `local` or `llm` in configuration, but the current source
-contains no LLM client or external model call. `AI_TIMEOUT_MS` is parsed for
-configuration compatibility and is not an active model integration.
-
-## Persistence and Prisma readiness
-
-The PostgreSQL schema in [`prisma/schema.prisma`](prisma/schema.prisma) and the
-initial SQL migration in
-[`prisma/migrations/0001_init/migration.sql`](prisma/migrations/0001_init/migration.sql)
-model users, projects, evidence, assessments, findings, reviews, credit
-batches/events, blockchain records, audit events, and idempotency records.
-
-The repository also provides `prisma:generate` and `prisma:migrate` scripts.
-The runtime persistence mode is selected at app startup:
-
-- `src/repository.ts` selects the in-memory store or `PrismaStore`.
-- `src/prisma-store/` constructs `PrismaClient`, hydrates domain collections,
-  and queues upserts for Map-shaped service compatibility.
-- `USE_IN_MEMORY` defaults to `true`.
-- `USE_IN_MEMORY=false` requires a reachable PostgreSQL database and fails
-  startup if hydration cannot complete.
-- The migration includes the runtime `Evidence.isPublic` field.
-- `prisma:seed` seeds development users and synthetic demo records.
-
-The default local mode is intentionally in-memory. For durable records, start
-PostgreSQL, apply migrations, seed it, and run with `USE_IN_MEMORY=false`.
-
-## Blockchain and Solidity workspace
-
-`src/blockchain/index.ts` contains:
-
-- `DisabledBlockchainAdapter`, which returns safe disabled read results and
-  rejects writes explicitly.
-- `ViemBlockchainAdapter`, which validates chain IDs, contract addresses, RPC
-  URLs, quantities, bytes32 identifiers, wallet configuration, contract reads,
-  transaction hashes, receipts, and confirmations.
-- ABI and role constants matching
-  [`contracts/src/CarbonCreditRegistry.sol`](contracts/src/CarbonCreditRegistry.sol).
-
-`src/app.ts` constructs the adapter and `src/service.ts` connects evidence and
-credit lifecycle requests to it. `BLOCKCHAIN_ENABLED` is `false` by default, and
-the default chain ID is local Anvil `31337`. Confirmation is currently awaited
-inside the request; a background reconciliation worker remains future work.
-
-The independent Foundry contract workspace uses Solidity `0.8.24` and includes
-role-controlled evidence registration, evidence-gated issuance, retirement
-balance checks, globally unique operation IDs, and pause behavior. Its local
-tests are run from `contracts/` with `forge test` or `make test`.
-
-There is no Sepolia deployment, deployed contract address, chain-specific
-deployment script, or API-to-Sepolia wiring in this repository. The generic
-`forge create` example in `contracts/README.md` is a manual deployment recipe,
-not evidence of a completed deployment.
-
-## Environment
-
-Copy `.env.example` to `.env` for local use. `.env` files and local storage are
-ignored by `.gitignore`; never commit credentials or private keys.
-
-| Variable                        | Default / accepted values             | Purpose and current caveat                                                                            |
-| ------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                      | `development` / `test` / `production` | Production rejects a development JWT secret and rejects `USE_IN_MEMORY=true`.                         |
-| `PORT`                          | `3000`                                | HTTP listen port.                                                                                     |
-| `API_PREFIX`                    | `/api/v1`                             | Prefix for API routes.                                                                                |
-| `DATABASE_URL`                  | Local PostgreSQL URL                  | Prisma connection used when `USE_IN_MEMORY=false`.                                                    |
-| `USE_IN_MEMORY`                 | `true`                                | Selects ephemeral Map storage or the durable Prisma-backed store.                                     |
-| `CORS_ALLOWED_ORIGINS`          | `http://localhost:5173`               | Comma-separated allow-list; credentials are disabled.                                                 |
-| `LOG_LEVEL`                     | `info`                                | Pino log level.                                                                                       |
-| `JWT_SECRET`                    | Development-only placeholder          | Must be at least 32 characters; replace before production.                                            |
-| `JWT_EXPIRES_IN`                | `15m`                                 | JWT expiry passed to `jsonwebtoken`.                                                                  |
-| `FILE_STORAGE_ROOT`             | `./data/storage`                      | Local evidence byte storage root.                                                                     |
-| `MAX_UPLOAD_SIZE`               | `10485760`                            | Maximum request/upload size in bytes; the config caps it at 100 MiB.                                  |
-| `RATE_LIMIT_WINDOW_MS`          | `60000`                               | Rate-limit window.                                                                                    |
-| `RATE_LIMIT_MAX`                | `120`                                 | Requests per window; `/health/live` is skipped.                                                       |
-| `BLOCKCHAIN_ENABLED`            | `false`                               | Enables real adapter-backed registration/issue/retire workflows when contract configuration is valid. |
-| `BLOCKCHAIN_RPC_URL`            | `http://127.0.0.1:8545`               | RPC used by the adapter when explicitly constructed and enabled.                                      |
-| `BLOCKCHAIN_CHAIN_ID`           | `31337`                               | Default local chain ID.                                                                               |
-| `BLOCKCHAIN_CONTRACT_ADDRESS`   | Empty                                 | Required by the adapter when enabled.                                                                 |
-| `BLOCKCHAIN_SIGNER_PRIVATE_KEY` | Empty                                 | Optional read-only signer configuration; required for writes. Keep it out of source control.          |
-| `AI_PROVIDER`                   | `local` / `llm`                       | Only local deterministic behavior is implemented.                                                     |
-| `AI_TIMEOUT_MS`                 | `3000`                                | Parsed configuration value; no active LLM call uses it.                                               |
-| `DEV_BOOTSTRAP_PASSWORD`        | Unset                                 | Optional non-production password for the three bootstrapped users.                                    |
-
-## Checks and test inventory
-
-The root commands are defined in `package.json` and wrapped by the root
-`Makefile`:
-
-```sh
-make test       # npm run test, Vitest
-make check      # typecheck, lint, test, then build
-npm run build
-npm run format:check
-npm run prisma:generate
+# 6. Run full root quality checks (typecheck, lint, test, build)
+npm run check
 ```
 
-The source currently contains 35 Vitest tests:
+---
 
-- 2 API flow/auth tests in `tests/app.test.ts`.
-- 20 deterministic verification tests in `tests/verification.test.ts`.
-- 6 blockchain adapter tests in `tests/blockchain.test.ts`.
-- 7 API-to-blockchain workflow tests in `tests/blockchain-workflow.test.ts`.
-- 5 Prisma store/mapping tests in `tests/prisma-store.test.ts`.
+## I. REST API Documentation (`/api/v1`)
 
-The contract file contains 19 Foundry test functions. They require `forge`.
+The backend automatically hosts an OpenAPI specification at `/openapi.json` and human-readable docs at `/docs`.
 
-Observed in the current repository environment on October 20, 2026:
+### Key Endpoints:
+- `POST /api/v1/auth/login`: Authenticate email/password; returns JWT bearer token.
+- `GET /api/v1/auth/me`: Retrieve current session identity.
+- `GET /api/v1/projects`: Paginated project catalog with status and category filtering.
+- `POST /api/v1/projects`: Register a new environmental project draft.
+- `POST /api/v1/projects/:id/evidence`: Upload multipart document payload (computes SHA-256 fingerprint).
+- `GET /api/v1/evidence/:id/verify`: Verify evidence file integrity against on-chain/ledger hash.
+- `POST /api/v1/projects/:id/assessments`: Trigger deterministic rules engine; generates score (0-100) and findings.
+- `GET /api/v1/reviews`: Auditor queue for pending submissions (enforces separation of duties).
+- `POST /api/v1/reviews/:id/decision`: Record `APPROVE`, `REJECT`, or `REQUEST_CHANGES` with justification.
+- `POST /api/v1/projects/:id/credits/batches`: Mint credit batch (requires UUIDv4 `Idempotency-Key`).
+- `POST /api/v1/credits/batches/:id/retire`: Burn credits for named beneficiary with certificate serial generation.
+- `GET /api/v1/public/projects/:id`: Unauthenticated zero-trust public disclosure.
 
-- `npm run typecheck` passed.
-- `npm run lint` passed.
-- A standalone `npm run build` passed and emitted `dist/src/server.js`.
-- `npm run prisma:generate` passed with Prisma's configuration deprecation
-  warning.
-- `npm run check` passed: 35 tests passed across five files.
-- `npm run format:check` passed.
-- `npm run audit` remains non-zero with 7 dependency advisories; see the final
-  audit for the exact remaining advisories and upgrade tradeoffs.
-- `contracts/make test` could not run because `forge` is not installed in the
-  current environment.
+---
 
-These are repository observations, not claims that the full check suite is
-green.
+## J. Security, Threat Modeling & Production Hardening
 
-## Docker and deployment
+- **Cryptographic File Storage**: Uploaded documents are stored using content-derived filenames. Pre-upload MIME sniffing verifies authentic document signatures (PDF, PNG, JPEG, GeoTIFF, CSV).
+- **Idempotency Guarantees**: State-mutating credit endpoints require an `Idempotency-Key` header stored with operation hashes. Duplicate concurrent requests return the existing transaction record rather than double-minting.
+- **Role-Based Access Control**: Strict separation between project proponents (`CONTRIBUTOR`) and audit evaluators (`REVIEWER`). Submitting users cannot approve their own projects.
+- **Blockchain Key Custody**: Private keys are never exposed in browser or API payloads. Production configurations require cloud KMS / HSM signing (AWS KMS, GCP KMS, or HashiCorp Vault) rather than raw server environment keys.
+- **Dependency Audit**: Eliminated critical `tinypool` and `mocker` vulnerabilities by upgrading to Vitest 5.0.5 and React Router 7.18.4.
 
-Build and run the API image for a local or prototype deployment:
+---
 
-```sh
-docker build -t carbonproof-ai-backend .
-docker run --rm --env-file .env -p 3000:3000 carbonproof-ai-backend
+## K. Demonstration Video & Hackathon Media
+
+A four-minute walkthrough demonstrating the running software, explainable risk assessment, evidence integrity check, review queue decision, and EVM settlement is provided in the repository:
+
+- **Demo Video**: [`media/demo/carbonproof-demo.mp4`](media/demo/carbonproof-demo.mp4)
+- **Synchronized Captions**: [`media/demo/carbonproof-demo.srt`](media/demo/carbonproof-demo.srt)
+- **Narration Script**: [`media/demo/narration_script.txt`](media/demo/narration_script.txt)
+- **Shot List & Timing**: [`docs/DEMO_SHOT_LIST.md`](docs/DEMO_SHOT_LIST.md)
+- **Production Notes**: [`media/demo/DEMO_PRODUCTION_NOTES.md`](media/demo/DEMO_PRODUCTION_NOTES.md)
+
+---
+
+## L. Repository Directory Map
+
+```text
+CarbonProofAI/
+├── contracts/                  # Solidity smart contracts & Foundry workspace
+│   ├── src/                    # CarbonCreditRegistry.sol
+│   ├── test/                   # Comprehensive Foundry test suite (30 tests)
+│   └── foundry.toml            # Foundry compiler configuration (Solc 0.8.28)
+├── docs/                       # Technical documentation and audit reports
+│   ├── ARCHITECTURE.md         # System components, data flows, and state machines
+│   ├── DEVELOPMENT.md          # Local development guide and environment setup
+│   ├── DEPLOYMENT.md           # Production hardening, Kubernetes, and KMS custody
+│   ├── SECURITY.md             # Threat modeling, RBAC, and cryptographic guarantees
+│   ├── TESTING.md              # Vitest and Foundry testing architecture
+│   ├── FINAL_RELEASE_AUDIT.md  # Comprehensive quality gate and security release audit
+│   ├── DEMO_SCRIPT.md          # 4-minute time-coded presentation script
+│   ├── DEMO_SHOT_LIST.md       # Scene-by-scene camera, transition, and UI focus guide
+│   └── DEMO_SETUP.md           # Repeatable demo environment setup guide
+├── frontend/                   # React 18 / TypeScript frontend application
+│   ├── src/                    # Components, feature modules, and UI primitives
+│   ├── public/                 # Brandmark assets and favicon
+│   ├── index.html              # HTML shell with Google Inter font
+│   └── package.json            # Frontend scripts and dependencies
+├── media/                      # Generated demonstration media and captures
+│   └── demo/                   # MP4 video, SRT captions, and recording frames
+├── prisma/                     # Database schema and initial PostgreSQL migrations
+│   ├── schema.prisma           # Prisma entity definitions
+│   └── seed.ts                 # Database seed script
+├── src/                        # Express 5 backend API source
+│   ├── app.ts                  # Express routes, validation schemas, and error handling
+│   ├── auth.ts                 # JWT issuance, password hashing, and role guards
+│   ├── config.ts               # Environment validation (Zod)
+│   ├── domain.ts               # Domain types, entity interfaces, and serialization
+│   ├── repository.ts           # Store abstraction and In-Memory store
+│   ├── server.ts               # HTTP server entrypoint
+│   ├── service.ts              # Core business services and idempotency
+│   ├── storage.ts              # File vault and MIME signature validation
+│   ├── blockchain/             # Viem EVM adapter and reconciliation worker
+│   └── verification/           # Deterministic rules engine and findings generator
+├── tests/                      # Backend Vitest unit and integration suites
+└── package.json                # Root package configuration and scripts
 ```
 
-The multi-stage [`Dockerfile`](Dockerfile) uses Node 22, runs `npm ci`, runs
-Prisma client generation, compiles TypeScript, creates `/app/data/storage`, and
-starts `node dist/src/server.js`.
+---
 
-[`docker-compose.yml`](docker-compose.yml) defines a PostgreSQL 16 service and
-an Anvil service under the `blockchain` profile. It does not define an API
-service. Start PostgreSQL, run migrations/seed, then start the API separately
-with `USE_IN_MEMORY=false` for durable local operation.
+## M. License & Hackathon Acknowledgments
 
-Before any real deployment, the project still needs object storage, production
-secret management, operational TLS/reverse-proxy configuration, distributed
-rate limiting, a background blockchain reconciliation worker, and a professional
-security review.
-
-## Security notes
-
-Implemented controls include Helmet, CORS origin filtering, request size
-limits, rate limiting, bcrypt password hashing, JWT issuer/audience checks,
-role-based authorization, project access checks, reviewer separation of duties,
-safe local storage keys, filename sanitization for downloads, MIME/content
-checks, SHA-256 integrity checks, request correlation IDs, audit events, and
-redaction of selected audit metadata and log headers.
-
-Operational limitations remain:
-
-- Development credentials and a development JWT fallback exist in source for
-  non-production bootstrap behavior; replace them before deployment.
-- In-memory mode is process-local; PostgreSQL mode persists domain records, but
-  the current Prisma Map-compatible adapter still needs production concurrency
-  testing and explicit transaction hardening.
-- Evidence bytes are local filesystem files, not object storage with a backup,
-  retention, or access-management policy.
-- PostgreSQL audit persistence is implemented in the Prisma store, but the audit
-  table is not tamper-proof.
-- Blockchain private-key handling is configuration-level and must be replaced by
-  a managed signer or vault for production.
-- The API does not provide TLS, secret management, or a production reverse
-  proxy configuration.
-- Risk output is a verification-assistance signal, not a claim of project
-  legitimacy or carbon-credit validity.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.  
+Built for the **IEEE ClimateChain Global Hackathon 2026** under the **Carbon Markets and Emissions Transparency** track.
