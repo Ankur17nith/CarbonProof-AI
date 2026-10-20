@@ -7,6 +7,8 @@ interface Vm {
     function expectRevert() external;
     function expectRevert(bytes calldata revertData) external;
     function prank(address sender) external;
+    function startPrank(address sender) external;
+    function stopPrank() external;
 }
 
 abstract contract TestBase {
@@ -74,25 +76,29 @@ contract CarbonCreditRegistryTest is TestBase {
     }
 
     function testRoleGrantAndRevocation() public {
-        vm.prank(ADMIN);
+        vm.startPrank(ADMIN);
         registry.grantRole(registry.EVIDENCE_ROLE(), EVIDENCE_OPERATOR);
+        vm.stopPrank();
         assertTrue(registry.hasRole(registry.EVIDENCE_ROLE(), EVIDENCE_OPERATOR));
 
-        vm.prank(ADMIN);
+        vm.startPrank(ADMIN);
         registry.revokeRole(registry.EVIDENCE_ROLE(), EVIDENCE_OPERATOR);
+        vm.stopPrank();
         assertFalse(registry.hasRole(registry.EVIDENCE_ROLE(), EVIDENCE_OPERATOR));
     }
 
     function testNonAdminCannotGrantRole() public {
+        bytes32 adminRole = registry.DEFAULT_ADMIN_ROLE();
+        bytes32 minterRole = registry.MINTER_ROLE();
         vm.expectRevert(
             abi.encodeWithSelector(
                 CarbonCreditRegistry.AccessControlUnauthorizedAccount.selector,
                 UNAUTHORIZED,
-                registry.DEFAULT_ADMIN_ROLE()
+                adminRole
             )
         );
         vm.prank(UNAUTHORIZED);
-        registry.grantRole(registry.MINTER_ROLE(), UNAUTHORIZED);
+        registry.grantRole(minterRole, UNAUTHORIZED);
     }
 
     function testEvidenceRegistrationStoresRecord() public {
@@ -170,16 +176,17 @@ contract CarbonCreditRegistryTest is TestBase {
     }
 
     function testRevokedEvidenceRoleCannotRegister() public {
-        vm.prank(ADMIN);
-        registry.grantRole(registry.EVIDENCE_ROLE(), EVIDENCE_OPERATOR);
-        vm.prank(ADMIN);
-        registry.revokeRole(registry.EVIDENCE_ROLE(), EVIDENCE_OPERATOR);
+        bytes32 evidenceRole = registry.EVIDENCE_ROLE();
+        vm.startPrank(ADMIN);
+        registry.grantRole(evidenceRole, EVIDENCE_OPERATOR);
+        registry.revokeRole(evidenceRole, EVIDENCE_OPERATOR);
+        vm.stopPrank();
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 CarbonCreditRegistry.AccessControlUnauthorizedAccount.selector,
                 EVIDENCE_OPERATOR,
-                registry.EVIDENCE_ROLE()
+                evidenceRole
             )
         );
         vm.prank(EVIDENCE_OPERATOR);
@@ -205,16 +212,17 @@ contract CarbonCreditRegistryTest is TestBase {
 
     function testRevokedMinterRoleCannotIssue() public {
         _registerEvidence(EVIDENCE_ONE, "ipfs://evidence-one", keccak256("content-one"));
-        vm.prank(ADMIN);
-        registry.grantRole(registry.MINTER_ROLE(), ISSUER);
-        vm.prank(ADMIN);
-        registry.revokeRole(registry.MINTER_ROLE(), ISSUER);
+        bytes32 minterRole = registry.MINTER_ROLE();
+        vm.startPrank(ADMIN);
+        registry.grantRole(minterRole, ISSUER);
+        registry.revokeRole(minterRole, ISSUER);
+        vm.stopPrank();
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 CarbonCreditRegistry.AccessControlUnauthorizedAccount.selector,
                 ISSUER,
-                registry.MINTER_ROLE()
+                minterRole
             )
         );
         vm.prank(ISSUER);
@@ -313,16 +321,17 @@ contract CarbonCreditRegistryTest is TestBase {
     }
 
     function testRevokedPauserCannotPause() public {
-        vm.prank(ADMIN);
-        registry.grantRole(registry.PAUSER_ROLE(), RETIREE);
-        vm.prank(ADMIN);
-        registry.revokeRole(registry.PAUSER_ROLE(), RETIREE);
+        bytes32 pauserRole = registry.PAUSER_ROLE();
+        vm.startPrank(ADMIN);
+        registry.grantRole(pauserRole, RETIREE);
+        registry.revokeRole(pauserRole, RETIREE);
+        vm.stopPrank();
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 CarbonCreditRegistry.AccessControlUnauthorizedAccount.selector,
                 RETIREE,
-                registry.PAUSER_ROLE()
+                pauserRole
             )
         );
         vm.prank(RETIREE);
@@ -330,12 +339,14 @@ contract CarbonCreditRegistryTest is TestBase {
     }
 
     function testRoleHolderCanRenounceRole() public {
-        vm.prank(ADMIN);
-        registry.grantRole(registry.MINTER_ROLE(), ISSUER);
+        bytes32 minterRole = registry.MINTER_ROLE();
+        vm.startPrank(ADMIN);
+        registry.grantRole(minterRole, ISSUER);
+        vm.stopPrank();
 
         vm.prank(ISSUER);
-        registry.renounceRole(registry.MINTER_ROLE(), ISSUER);
-        assertFalse(registry.hasRole(registry.MINTER_ROLE(), ISSUER));
+        registry.renounceRole(minterRole, ISSUER);
+        assertFalse(registry.hasRole(minterRole, ISSUER));
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -343,7 +354,162 @@ contract CarbonCreditRegistryTest is TestBase {
             )
         );
         vm.prank(ISSUER);
-        registry.renounceRole(registry.MINTER_ROLE(), ADMIN);
+        registry.renounceRole(minterRole, ADMIN);
+    }
+
+    function testUnauthorizedIssuanceReverts() public {
+        _registerEvidence(EVIDENCE_ONE, "ipfs://evidence-one", keccak256("content-one"));
+        bytes32 minterRole = registry.MINTER_ROLE();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CarbonCreditRegistry.AccessControlUnauthorizedAccount.selector,
+                UNAUTHORIZED,
+                minterRole
+            )
+        );
+        vm.prank(UNAUTHORIZED);
+        registry.issueCredits(ISSUE_OPERATION, PROJECT_ONE, 100, EVIDENCE_ONE);
+    }
+
+    function testUnauthorizedRetirementReverts() public {
+        _issueCredits(100);
+        bytes32 retirerRole = registry.RETIRER_ROLE();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CarbonCreditRegistry.AccessControlUnauthorizedAccount.selector,
+                UNAUTHORIZED,
+                retirerRole
+            )
+        );
+        vm.prank(UNAUTHORIZED);
+        registry.retireCredits(RETIRE_OPERATION, PROJECT_ONE, 50);
+    }
+
+    function testUnauthorizedPauseAndUnpauseReverts() public {
+        bytes32 pauserRole = registry.PAUSER_ROLE();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CarbonCreditRegistry.AccessControlUnauthorizedAccount.selector,
+                UNAUTHORIZED,
+                pauserRole
+            )
+        );
+        vm.prank(UNAUTHORIZED);
+        registry.pause();
+
+        vm.startPrank(ADMIN);
+        registry.pause();
+        vm.stopPrank();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CarbonCreditRegistry.AccessControlUnauthorizedAccount.selector,
+                UNAUTHORIZED,
+                pauserRole
+            )
+        );
+        vm.prank(UNAUTHORIZED);
+        registry.unpause();
+    }
+
+    function testPauseStateTransitions() public {
+        vm.startPrank(ADMIN);
+        registry.pause();
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.EnforcedPause.selector));
+        registry.pause();
+
+        registry.unpause();
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.ExpectedPause.selector));
+        registry.unpause();
+        vm.stopPrank();
+    }
+
+    function testRegisterEvidenceRejectsZeroIdentifier() public {
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.InvalidIdentifier.selector));
+        vm.prank(ADMIN);
+        registry.registerEvidence(bytes32(0), "ipfs://zero", keccak256("content"));
+    }
+
+    function testIssueCreditsRejectsZeroOperationOrProjectId() public {
+        _registerEvidence(EVIDENCE_ONE, "ipfs://evidence-one", keccak256("content-one"));
+
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.InvalidIdentifier.selector));
+        vm.prank(ADMIN);
+        registry.issueCredits(bytes32(0), PROJECT_ONE, 10, EVIDENCE_ONE);
+
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.InvalidIdentifier.selector));
+        vm.prank(ADMIN);
+        registry.issueCredits(ISSUE_OPERATION, bytes32(0), 10, EVIDENCE_ONE);
+    }
+
+    function testRetireCreditsRejectsZeroOperationOrProjectId() public {
+        _issueCredits(100);
+
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.InvalidIdentifier.selector));
+        vm.prank(ADMIN);
+        registry.retireCredits(bytes32(0), PROJECT_ONE, 10);
+
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.InvalidIdentifier.selector));
+        vm.prank(ADMIN);
+        registry.retireCredits(RETIRE_OPERATION, bytes32(0), 10);
+    }
+
+    function testBatchEvidenceRegistrationRejectsEmptyBatch() public {
+        bytes32[] memory emptyIds = new bytes32[](0);
+        string[] memory emptyUris = new string[](0);
+        bytes32[] memory emptyHashes = new bytes32[](0);
+
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.EmptyBatch.selector));
+        vm.prank(ADMIN);
+        registry.registerEvidenceBatch(emptyIds, emptyUris, emptyHashes);
+    }
+
+    function testGetEvidenceRejectsUnknownEvidence() public {
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.UnknownEvidence.selector, EVIDENCE_ONE));
+        registry.getEvidence(EVIDENCE_ONE);
+    }
+
+    function testExactBalanceRetirementBoundary() public {
+        _issueCredits(100);
+
+        vm.prank(ADMIN);
+        registry.retireCredits(RETIRE_OPERATION, PROJECT_ONE, 100);
+
+        (uint256 issued, uint256 retired, uint256 available) = registry.getCreditBalance(PROJECT_ONE);
+        assertEq(issued, 100);
+        assertEq(retired, 100);
+        assertEq(available, 0);
+
+        // Retiring even 1 more credit fails with InsufficientCredits
+        bytes32 extraRetire = keccak256("extra-retire");
+        vm.expectRevert(abi.encodeWithSelector(CarbonCreditRegistry.InsufficientCredits.selector, PROJECT_ONE, 1, 0));
+        vm.prank(ADMIN);
+        registry.retireCredits(extraRetire, PROJECT_ONE, 1);
+    }
+
+    function testMultipleIssuancesAndRetirements() public {
+        _registerEvidence(EVIDENCE_ONE, "ipfs://evidence-one", keccak256("content-one"));
+
+        vm.startPrank(ADMIN);
+        registry.issueCredits(ISSUE_OPERATION, PROJECT_ONE, 500, EVIDENCE_ONE);
+        registry.issueCredits(SECOND_ISSUE_OPERATION, PROJECT_ONE, 250, EVIDENCE_ONE);
+        vm.stopPrank();
+
+        (uint256 issued, uint256 retired, uint256 available) = registry.getCreditBalance(PROJECT_ONE);
+        assertEq(issued, 750);
+        assertEq(retired, 0);
+        assertEq(available, 750);
+
+        vm.startPrank(ADMIN);
+        registry.retireCredits(RETIRE_OPERATION, PROJECT_ONE, 300);
+        bytes32 retireOp2 = keccak256("retire-op-2");
+        registry.retireCredits(retireOp2, PROJECT_ONE, 450);
+        vm.stopPrank();
+
+        (issued, retired, available) = registry.getCreditBalance(PROJECT_ONE);
+        assertEq(issued, 750);
+        assertEq(retired, 750);
+        assertEq(available, 0);
     }
 
     function _registerEvidence(bytes32 evidenceId, string memory uri, bytes32 contentHash) internal {
